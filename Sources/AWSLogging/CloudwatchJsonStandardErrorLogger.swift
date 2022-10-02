@@ -12,7 +12,7 @@
 // permissions and limitations under the License.
 //
 // CloudwatchJsonStandardErrorLogger.swift
-// AWSCore
+// AWSLogging
 //
 
 import Foundation
