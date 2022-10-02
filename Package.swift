@@ -15,6 +15,9 @@ let package = Package(
         .library(
             name: "AWSHttp",
             targets: ["AWSHttp"]),
+        .library(
+            name: "AWSLogging",
+            targets: ["AWSLogging"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.33.0"),
@@ -44,6 +47,11 @@ let package = Package(
                 .product(name: "HTTPPathCoding", package: "smoke-http"),
                 .product(name: "HTTPHeadersCoding", package: "smoke-http"),
                 .product(name: "Crypto", package: "swift-crypto"),
+            ]
+        ),
+        .target(
+            name: "AWSLogging", dependencies: [
+                .product(name: "Logging", package: "swift-log"),
             ]
         ),
     ],
