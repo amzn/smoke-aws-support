@@ -11,8 +11,8 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-// CloudwatchStandardErrorLogger.swift
-// AWSCore
+// CloudwatchJsonStandardErrorLogger.swift
+// AWSLogging
 //
 
 import Foundation
@@ -24,15 +24,21 @@ private let sourcesSubString = "Sources/"
  Implementation of the Logger protocol that emits logs as
  required to Standard error to be picked up by Cloudwatch logs.
  */
-public struct CloudwatchStandardErrorLogger: LogHandler {
+public struct CloudwatchJsonStandardErrorLogger: LogHandler {
     public var metadata: Logger.Metadata
     public var logLevel: Logger.Level
     
+    private let jsonEncoder: JSONEncoder
     private let stream: TextOutputStream
     
     private init(minimumLogLevel: Logger.Level) {
         self.logLevel = minimumLogLevel
         self.metadata = [:]
+        
+        let theJsonEncoder = JSONEncoder()
+        theJsonEncoder.outputFormatting = [.sortedKeys]
+        
+        self.jsonEncoder = theJsonEncoder
         self.stream = StdioOutputStream.stderr
     }
     
@@ -50,7 +56,7 @@ public struct CloudwatchStandardErrorLogger: LogHandler {
      */
     public static func enableLogging(minimumLogLevel: Logger.Level = .info) {
         LoggingSystem.bootstrap { label in
-            return CloudwatchStandardErrorLogger(minimumLogLevel: minimumLogLevel)
+            return CloudwatchJsonStandardErrorLogger(minimumLogLevel: minimumLogLevel)
         }
     }
     
@@ -60,7 +66,7 @@ public struct CloudwatchStandardErrorLogger: LogHandler {
     @available(swift, deprecated: 2.0, renamed: "enableLogging(minimumLogLevel:)")
     public static func enableLogging(minimumLoggerType: Logger.Level) {
         LoggingSystem.bootstrap { label in
-            return CloudwatchStandardErrorLogger(minimumLogLevel: minimumLoggerType)
+            return CloudwatchJsonStandardErrorLogger(minimumLogLevel: minimumLoggerType)
         }
     }
     
@@ -81,25 +87,21 @@ public struct CloudwatchStandardErrorLogger: LogHandler {
             metadataToUse = self.metadata
         }
         
-        let levelString = "\(level)".uppercased()
-        
-        let metadataAsTags = metadataToUse.map { (key, value) -> String in "\(key):\(value.description)" }
-        
-        let tagString: String
-        if !metadataAsTags.isEmpty {
-            tagString = "[\(metadataAsTags.joined(separator: "|"))] "
-        } else {
-            tagString = ""
+        var codableMetadata: [String: String] = [:]
+        metadataToUse.forEach { (key, value) in
+            codableMetadata[key] = value.description
         }
         
-        var stream = self.stream
-        stream.write("\(shortFileName):\(line):\(function) [\(levelString)] \(tagString)\(message)\n")
-    }
-}
-
-extension FileHandle: TextOutputStream {
-    public func write(_ string: String) {
-        guard let data = string.data(using: .utf8) else { return }
-        self.write(data)
+        codableMetadata["fileName"] = shortFileName
+        codableMetadata["line"] = "\(line)"
+        codableMetadata["function"] = function
+        codableMetadata["level"] = level.rawValue
+        codableMetadata["message"] = "\(message)"
+        
+        if let jsonData = try? self.jsonEncoder.encode(codableMetadata),
+           let jsonMessage = String(data: jsonData, encoding: .utf8) {
+            var stream = self.stream
+            stream.write("\(jsonMessage)\n")
+        }
     }
 }

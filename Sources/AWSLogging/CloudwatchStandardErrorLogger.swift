@@ -11,8 +11,8 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-// CloudwatchJsonStandardErrorLogger.swift
-// AWSCore
+// CloudwatchStandardErrorLogger.swift
+// AWSLogging
 //
 
 import Foundation
@@ -24,21 +24,15 @@ private let sourcesSubString = "Sources/"
  Implementation of the Logger protocol that emits logs as
  required to Standard error to be picked up by Cloudwatch logs.
  */
-public struct CloudwatchJsonStandardErrorLogger: LogHandler {
+public struct CloudwatchStandardErrorLogger: LogHandler {
     public var metadata: Logger.Metadata
     public var logLevel: Logger.Level
     
-    private let jsonEncoder: JSONEncoder
     private let stream: TextOutputStream
     
     private init(minimumLogLevel: Logger.Level) {
         self.logLevel = minimumLogLevel
         self.metadata = [:]
-        
-        let theJsonEncoder = JSONEncoder()
-        theJsonEncoder.outputFormatting = [.sortedKeys]
-        
-        self.jsonEncoder = theJsonEncoder
         self.stream = StdioOutputStream.stderr
     }
     
@@ -56,7 +50,7 @@ public struct CloudwatchJsonStandardErrorLogger: LogHandler {
      */
     public static func enableLogging(minimumLogLevel: Logger.Level = .info) {
         LoggingSystem.bootstrap { label in
-            return CloudwatchJsonStandardErrorLogger(minimumLogLevel: minimumLogLevel)
+            return CloudwatchStandardErrorLogger(minimumLogLevel: minimumLogLevel)
         }
     }
     
@@ -66,7 +60,7 @@ public struct CloudwatchJsonStandardErrorLogger: LogHandler {
     @available(swift, deprecated: 2.0, renamed: "enableLogging(minimumLogLevel:)")
     public static func enableLogging(minimumLoggerType: Logger.Level) {
         LoggingSystem.bootstrap { label in
-            return CloudwatchJsonStandardErrorLogger(minimumLogLevel: minimumLoggerType)
+            return CloudwatchStandardErrorLogger(minimumLogLevel: minimumLoggerType)
         }
     }
     
@@ -87,21 +81,25 @@ public struct CloudwatchJsonStandardErrorLogger: LogHandler {
             metadataToUse = self.metadata
         }
         
-        var codableMetadata: [String: String] = [:]
-        metadataToUse.forEach { (key, value) in
-            codableMetadata[key] = value.description
+        let levelString = "\(level)".uppercased()
+        
+        let metadataAsTags = metadataToUse.map { (key, value) -> String in "\(key):\(value.description)" }
+        
+        let tagString: String
+        if !metadataAsTags.isEmpty {
+            tagString = "[\(metadataAsTags.joined(separator: "|"))] "
+        } else {
+            tagString = ""
         }
         
-        codableMetadata["fileName"] = shortFileName
-        codableMetadata["line"] = "\(line)"
-        codableMetadata["function"] = function
-        codableMetadata["level"] = level.rawValue
-        codableMetadata["message"] = "\(message)"
-        
-        if let jsonData = try? self.jsonEncoder.encode(codableMetadata),
-           let jsonMessage = String(data: jsonData, encoding: .utf8) {
-            var stream = self.stream
-            stream.write("\(jsonMessage)\n")
-        }
+        var stream = self.stream
+        stream.write("\(shortFileName):\(line):\(function) [\(levelString)] \(tagString)\(message)\n")
+    }
+}
+
+extension FileHandle: TextOutputStream {
+    public func write(_ string: String) {
+        guard let data = string.data(using: .utf8) else { return }
+        self.write(data)
     }
 }
