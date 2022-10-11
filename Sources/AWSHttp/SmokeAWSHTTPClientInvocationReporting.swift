@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  AWSHttpClientInvocationReporting.swift
+//  SmokeAWSHTTPClientInvocationReporting.swift
 //  AWSHttp
 //
 
@@ -22,7 +22,7 @@ import NIO
 import Logging
 import Metrics
 
-public struct AWSHttpClientInvocationReporting<InvocationReportingType: HTTPClientCoreInvocationReporting>: HTTPClientInvocationReporting {
+public struct SmokeAWSHTTPClientInvocationReporting<InvocationReportingType: HTTPClientCoreInvocationReporting>: HTTPClientInvocationReporting {
     public typealias TraceContextType = InvocationReportingType.TraceContextType
     
     private let smokeAWSInvocationReporting: InvocationReportingType
