@@ -17,6 +17,7 @@
 
 import Foundation
 import Metrics
+import SmokeHTTPClient
 
 /**
  A context related to reporting on the invocation of a SmokeAWS operation.
@@ -56,7 +57,7 @@ public struct StandardSmokeAWSOperationReporting<OperationIdentifer: Hashable & 
     private let retryCountMetric = "retryCount"
     private let latencyTimeMetric = "latencyTime"
     
-    public init(clientName: String, operation: OperationIdentifer, configuration: SmokeAWSClientReportingConfiguration<OperationIdentifer>) {
+    public init(clientName: String, operation: OperationIdentifer, configuration: HTTPClientReportingConfiguration<OperationIdentifer>) {
         let operationName = operation.description
         
         if configuration.reportSuccessForOperation(operation) {
