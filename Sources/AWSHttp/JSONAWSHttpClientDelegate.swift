@@ -25,6 +25,18 @@ import HTTPHeadersCoding
 import HTTPPathCoding
 import AsyncHTTPClient
 import Logging
+import Metrics
+
+private let namespaceDimension = "Namespace"
+private let metricNameDimension = "Metric Name"
+
+private let timeIntervalToMilliseconds: Double = 1000
+
+internal extension TimeInterval {
+    var milliseconds: Int {
+        return Int(self * timeIntervalToMilliseconds)
+    }
+}
 
 /**
  Struct conforming to the AWSHttpClientDelegate protocol that encodes and decode the request
@@ -35,6 +47,7 @@ public struct JSONAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClien
     private let requiresTLS: Bool
     private let inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?
     private let errorTypeHTTPHeader: String?
+    private let errorDecodeTimer: Metrics.Timer
     
     public init(requiresTLS: Bool,
                 inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy? = nil,
@@ -42,6 +55,11 @@ public struct JSONAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClien
         self.requiresTLS = requiresTLS
         self.inputQueryMapDecodingStrategy = inputQueryMapDecodingStrategy
         self.errorTypeHTTPHeader = errorTypeHTTPHeader
+        
+        let errorDecodeTimeDimensions = [(namespaceDimension, "JSONAWSHttpClientDelegate"),
+                                     (metricNameDimension, "ErrorDecodeTime")]
+        self.errorDecodeTimer = Metrics.Timer(label: "JSONAWSHttpClientDelegate.ErrorDecodeTime",
+                                              dimensions: errorDecodeTimeDimensions)
     }
     
     public func getResponseError<InvocationReportingType: HTTPClientInvocationReporting>(
@@ -63,8 +81,14 @@ public struct JSONAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClien
             invocationReporting.logger.trace("Attempting to decode error data from JSON to \(ErrorType.self)",
                                              metadata: ["body": "\(bodyData.debugString)"])
             
+            let errorDecodeStartTime = Date()
+            
             // attempt to get an error of Error type by decoding the body data
             cause = try JSONDecoder.awsCompatibleDecoder().decode(ErrorType.self, from: bodyData)
+            
+            let timeInterval = Date().timeIntervalSince(errorDecodeStartTime)
+            
+            self.errorDecodeTimer.recordMilliseconds(timeInterval.milliseconds)
         }
         
         return HTTPClientError(responseCode: Int(response.status.code), cause: cause)
