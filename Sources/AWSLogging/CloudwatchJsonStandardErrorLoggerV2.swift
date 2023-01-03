@@ -135,7 +135,9 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     public func start() {
         Task {
             for await entry in self.entryStream {
-                entry.log(globalMetadata: self.metadata, jsonEncoder: self.jsonEncoder, stream: self.stream)
+                Task {
+                    entry.log(globalMetadata: self.metadata, jsonEncoder: self.jsonEncoder, stream: self.stream)
+                }
             }
         }
     }
