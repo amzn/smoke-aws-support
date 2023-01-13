@@ -98,10 +98,12 @@ public struct CloudwatchJsonStandardErrorLogger: LogHandler {
         codableMetadata["level"] = level.rawValue
         codableMetadata["message"] = "\(message)"
         
-        if let jsonData = try? self.jsonEncoder.encode(codableMetadata),
-           let jsonMessage = String(data: jsonData, encoding: .utf8) {
-            var stream = self.stream
-            stream.write("\(jsonMessage)\n")
+        DispatchQueue.global().async {
+            if let jsonData = try? self.jsonEncoder.encode(codableMetadata),
+               let jsonMessage = String(data: jsonData, encoding: .utf8) {
+                var stream = self.stream
+                stream.write("\(jsonMessage)\n")
+            }
         }
     }
 }
