@@ -27,7 +27,7 @@ public enum MetadataType {
  Implementation of the Logger protocol that emits logs as
  required to Standard error to be picked up by Cloudwatch logs.
  */
-internal struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
+public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     public var metadata: Logger.Metadata
     public var logLevel: Logger.Level
     
