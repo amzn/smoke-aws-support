@@ -98,10 +98,14 @@ internal struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
      Set the logger implementation of the LoggerAPI to this type.
      */
     public static func enableLogging(minimumLogLevel: Logger.Level = .info,
-                                     metadataTypes: [String: MetadataType] = [:]) {
+                                     metadataTypes: [String: MetadataType] = [:]) -> CloudwatchJsonStandardErrorLoggerV2 {
+        let logger = CloudwatchJsonStandardErrorLoggerV2(minimumLogLevel: minimumLogLevel, metadataTypes: metadataTypes)
+        
         LoggingSystem.bootstrap { label in
-            return CloudwatchJsonStandardErrorLoggerV2(minimumLogLevel: minimumLogLevel, metadataTypes: metadataTypes)
+            return logger
         }
+        
+        return logger
     }
     
     public func log(level: Logger.Level, message: Logger.Message,
