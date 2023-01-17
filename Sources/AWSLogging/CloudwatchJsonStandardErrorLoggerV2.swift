@@ -18,6 +18,8 @@
 import Foundation
 import Logging
 
+#if compiler(>=5.7)
+
 private let sourcesSubString = "Sources/"
 
 private struct LogEntry: Encodable {
@@ -186,3 +188,4 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
         }
     }
 }
+#endif
