@@ -18,8 +18,6 @@
 import Foundation
 import Logging
 
-#if compiler(>=5.7)
-
 private let sourcesSubString = "Sources/"
 
 private struct LogEntry: Encodable {
@@ -76,7 +74,7 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
         var newEntryQueueFinishHandler: (() -> ())?
         // create an async stream with a handler for adding new elments
         // and a handler for finishing the stream
-        let rawEntryStream = AsyncStream { continuation in
+        let rawEntryStream = AsyncStream<String> { continuation in
             newEntryHandler = { entry in
                 continuation.yield(entry)
             }
@@ -188,4 +186,3 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
         }
     }
 }
-#endif
