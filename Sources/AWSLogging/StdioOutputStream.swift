@@ -82,3 +82,39 @@ internal struct StdioOutputStream: TextOutputStream {
         case always
     }
 }
+
+/// A wrapper to facilitate `print`-ing to stderr and stdio.
+/// Unlike `StdioOutputStream`, provides no locking on the underlying `FILE`.
+/// Cross-thread interleaving of output is expected to be handled externally.
+internal struct NonLockingStdioOutputStream: TextOutputStream {
+    #if canImport(WASILibc)
+    internal let file: OpaquePointer
+    #else
+    internal let file: UnsafeMutablePointer<FILE>
+    #endif
+    internal let flushMode: FlushMode
+
+    internal func write(_ string: String) {
+        string.withCString { ptr in
+            _ = fputs(ptr, self.file)
+            if case .always = self.flushMode {
+                self.flush()
+            }
+        }
+    }
+
+    /// Flush the underlying stream.
+    /// This has no effect when using the `.always` flush mode, which is the default
+    internal func flush() {
+        _ = fflush(self.file)
+    }
+
+    internal static let stderr = NonLockingStdioOutputStream(file: systemStderr, flushMode: .always)
+    internal static let stdout = NonLockingStdioOutputStream(file: systemStdout, flushMode: .always)
+
+    /// Defines the flushing strategy for the underlying stream.
+    internal enum FlushMode {
+        case undefined
+        case always
+    }
+}
