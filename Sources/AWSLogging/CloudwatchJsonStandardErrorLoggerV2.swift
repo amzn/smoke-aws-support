@@ -55,7 +55,7 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     
     private let entryStream: AsyncStream<String>
     private let stream: TextOutputStream
-    private let entryHander: (String) -> ()
+    private let entryHandler: (String) -> ()
     private let entryQueueFinishHandler: () -> ()
     private let metadataTypes: [String: MetadataType]
     
@@ -72,7 +72,7 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
         
         var newEntryHandler: ((String) -> ())?
         var newEntryQueueFinishHandler: (() -> ())?
-        // create an async stream with a handler for adding new elments
+        // create an async stream with a handler for adding new elements
         // and a handler for finishing the stream
         let rawEntryStream = AsyncStream<String> { continuation in
             newEntryHandler = { entry in
@@ -89,7 +89,7 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
         }
         
         self.entryStream = rawEntryStream
-        self.entryHander = newEntryHandler
+        self.entryHandler = newEntryHandler
         self.entryQueueFinishHandler = newEntryQueueFinishHandler
         self.stream = NonLockingStdioOutputStream.stderr
     }
@@ -103,6 +103,7 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     // is called.
     public func run() async {
         for await jsonMessage in self.entryStream {
+            // get a mutable version of the stream
             var stream = self.stream
             stream.write("\(jsonMessage)\n")
         }
@@ -181,7 +182,7 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
             if let jsonData = try? self.jsonEncoder.encode(logEntry),
                let jsonMessage = String(data: jsonData, encoding: .utf8) {
                 // pass to the entry queue
-                self.entryHander(jsonMessage)
+                self.entryHandler(jsonMessage)
             }
         }
     }
