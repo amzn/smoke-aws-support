@@ -53,11 +53,12 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     
     private let jsonEncoder: JSONEncoder
     
-    private let entryStream: AsyncStream<String>
+    private let entryStream: AsyncStream<LogEntry>
     private let stream: TextOutputStream
-    private let entryHandler: (String) -> ()
+    private let entryHandler: (LogEntry) -> ()
     private let entryQueueFinishHandler: () -> ()
     private let metadataTypes: [String: MetadataType]
+    private let offTaskAsyncExecutor = OffTaskAsyncExecutor()
     
     private init(minimumLogLevel: Logger.Level,
                  metadataTypes: [String: MetadataType]) {
@@ -70,11 +71,11 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
         
         self.jsonEncoder = theJsonEncoder
         
-        var newEntryHandler: ((String) -> ())?
+        var newEntryHandler: ((LogEntry) -> ())?
         var newEntryQueueFinishHandler: (() -> ())?
         // create an async stream with a handler for adding new elements
         // and a handler for finishing the stream
-        let rawEntryStream = AsyncStream<String> { continuation in
+        let rawEntryStream = AsyncStream<LogEntry> { continuation in
             newEntryHandler = { entry in
                 continuation.yield(entry)
             }
@@ -102,7 +103,23 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     // This function will not return until after `shutdown()`
     // is called.
     public func run() async {
-        for await jsonMessage in self.entryStream {
+        for await logEntry in self.entryStream {
+            // pass to the global dispatch queue for serialization
+            // schedule at a low priority to avoid disrupting request handling
+            let jsonMessageOptional: String? = await self.offTaskAsyncExecutor.execute(qos: .utility) {
+                if let jsonData = try? self.jsonEncoder.encode(logEntry),
+                   let jsonMessage = String(data: jsonData, encoding: .utf8) {
+                    return jsonMessage
+                }
+                
+                return nil
+            }
+            
+            guard let jsonMessage = jsonMessageOptional else {
+                // nothing to do
+                continue
+            }
+            
             // get a mutable version of the stream
             var stream = self.stream
             stream.write("\(jsonMessage)\n")
@@ -175,15 +192,9 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
         codableMetadata["level"] = level.rawValue
         codableMetadata["message"] = "\(message)"
         
-        // pass to the global dispatch queue for serialization
-        // schedule at a low priority to avoid disrupting request handling
-        DispatchQueue.global().async(qos: .utility) {
-            let logEntry = LogEntry(stringFields: codableMetadata, integerFields: codableMetadataInts)
-            if let jsonData = try? self.jsonEncoder.encode(logEntry),
-               let jsonMessage = String(data: jsonData, encoding: .utf8) {
-                // pass to the entry queue
-                self.entryHandler(jsonMessage)
-            }
-        }
+        let logEntry = LogEntry(stringFields: codableMetadata, integerFields: codableMetadataInts)
+        
+        // pass to the entry queue
+        self.entryHandler(logEntry)
     }
 }
