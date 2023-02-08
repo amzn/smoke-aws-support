@@ -20,16 +20,6 @@ import Logging
 
 private let sourcesSubString = "Sources/"
 
-private struct LogEntry: Encodable {
-    let stringFields: [String: String]
-    let integerFields: [String: Int]
-    
-    func encode(to encoder: Encoder) throws {
-        try self.stringFields.encode(to: encoder)
-        try self.integerFields.encode(to: encoder)
-    }
-}
-
 public enum MetadataType {
     case String
     case Int
@@ -51,11 +41,9 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     public var metadata: Logger.Metadata
     public var logLevel: Logger.Level
     
-    private let jsonEncoder: JSONEncoder
-    
-    private let entryStream: AsyncStream<String>
+    private let entryStream: AsyncStream<LogEntry>
     private let stream: TextOutputStream
-    private let entryHandler: (String) -> ()
+    private let entryHandler: (LogEntry) -> ()
     private let entryQueueFinishHandler: () -> ()
     private let metadataTypes: [String: MetadataType]
     
@@ -65,16 +53,11 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
         self.metadata = [:]
         self.metadataTypes = metadataTypes
         
-        let theJsonEncoder = JSONEncoder()
-        theJsonEncoder.outputFormatting = [.sortedKeys]
-        
-        self.jsonEncoder = theJsonEncoder
-        
-        var newEntryHandler: ((String) -> ())?
+        var newEntryHandler: ((LogEntry) -> ())?
         var newEntryQueueFinishHandler: (() -> ())?
         // create an async stream with a handler for adding new elements
         // and a handler for finishing the stream
-        let rawEntryStream = AsyncStream<String> { continuation in
+        let rawEntryStream = AsyncStream<LogEntry> { continuation in
             newEntryHandler = { entry in
                 continuation.yield(entry)
             }
@@ -102,7 +85,10 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     // This function will not return until after `shutdown()`
     // is called.
     public func run() async {
-        for await jsonMessage in self.entryStream {
+        for await logEntry in self.entryStream {
+            let jsonMessage = logEntry.getJsonMessage(globalMetadata: self.metadata,
+                                                      metadataTypes: self.metadataTypes)
+            
             // get a mutable version of the stream
             var stream = self.stream
             stream.write("\(jsonMessage)\n")
@@ -134,56 +120,67 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     
     public func log(level: Logger.Level, message: Logger.Message,
                     metadata: Logger.Metadata?, file: String, function: String, line: UInt) {
+        let logEntry = LogEntry(level: level, message: message, metadata: metadata,
+                                file: file, function: function, line: line)
+        
+        // pass to the entry queue
+        self.entryHandler(logEntry)
+    }
+}
+
+internal struct LogEntry {
+    let level: Logger.Level
+    let message: Logger.Message
+    let metadata: Logger.Metadata?
+    let file: String
+    let function: String
+    let line: UInt
+
+    func getJsonMessage(globalMetadata: Logger.Metadata,
+                        metadataTypes: [String: MetadataType]) -> String {
         let shortFileName: String
-        if let range = file.range(of: "Sources/") {
-            let startIndex = file.index(range.lowerBound, offsetBy: sourcesSubString.count)
-            shortFileName = String(file[startIndex...])
+        if let range = self.file.range(of: "Sources/") {
+            let startIndex = self.file.index(range.lowerBound, offsetBy: sourcesSubString.count)
+            shortFileName = String(self.file[startIndex...])
         } else {
-            shortFileName = file
+            shortFileName = self.file
         }
         
-        let metadataToUse: Logger.Metadata
-        if let metadata = metadata {
-            metadataToUse = self.metadata.merging(metadata) { (global, local) in local }
+        let metadataToUse: [String: Logger.MetadataValue]
+        if let metadata = self.metadata {
+            metadataToUse = globalMetadata.merging(metadata) { (global, local) in local }
         } else {
-            metadataToUse = self.metadata
+            metadataToUse = globalMetadata
         }
         
-        var codableMetadata: [String: String] = [:]
-        var codableMetadataInts: [String: Int] = [:]
-        metadataToUse.forEach { (key, value) in
+        var jsonValues: [(String, JSONValue)] = []
+        for (key, value) in metadataToUse {
             // determine the metadata type
             let metadataType: MetadataType
-            if let theMetadataType = self.metadataTypes[key] {
+            if let theMetadataType = metadataTypes[key] {
                 metadataType = theMetadataType
             } else {
                 metadataType = .String
             }
             
-            // add to the appropriate dictionary, converting if necessary
+            // return with the appropriate JSONValue
             switch metadataType {
             case .String:
-                codableMetadata[key] = value.description
+                jsonValues.append((key, .string(value.description)))
             case .Int:
-                codableMetadataInts[key] = Int(value.description)
+                jsonValues.append((key, .number(value.description)))
             }
         }
+        let lineAsString = String(self.line)
         
-        codableMetadata["fileName"] = shortFileName
-        codableMetadataInts["line"] = Int(line)
-        codableMetadata["function"] = function
-        codableMetadata["level"] = level.rawValue
-        codableMetadata["message"] = "\(message)"
+        jsonValues.append(("fileName", .string(shortFileName)))
+        jsonValues.append(("line", .number(lineAsString)))
+        jsonValues.append(("function", .string(self.function)))
+        jsonValues.append(("level", .string(self.level.rawValue)))
+        jsonValues.append(("message", .string("\(self.message)")))
         
-        // pass to the global dispatch queue for serialization
-        // schedule at a low priority to avoid disrupting request handling
-        DispatchQueue.global().async(qos: .utility) {
-            let logEntry = LogEntry(stringFields: codableMetadata, integerFields: codableMetadataInts)
-            if let jsonData = try? self.jsonEncoder.encode(logEntry),
-               let jsonMessage = String(data: jsonData, encoding: .utf8) {
-                // pass to the entry queue
-                self.entryHandler(jsonMessage)
-            }
-        }
+        let sortedJsonValues = jsonValues.sorted { $0.0 < $1.0 }
+        
+        return sortedJsonValues.jsonString
     }
 }
