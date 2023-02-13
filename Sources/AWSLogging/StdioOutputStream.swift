@@ -31,10 +31,14 @@ let systemStdout = WASILibc.stdout!
 #error("Unsupported runtime")
 #endif
 
+internal protocol Flushable {
+    mutating func flush()
+}
+
 /// A wrapper to facilitate `print`-ing to stderr and stdio that
 /// ensures access to the underlying `FILE` is locked to prevent
 /// cross-thread interleaving of output.
-internal struct StdioOutputStream: TextOutputStream {
+internal struct StdioOutputStream: TextOutputStream & Flushable {
     #if canImport(WASILibc)
     internal let file: OpaquePointer
     #else
@@ -86,7 +90,7 @@ internal struct StdioOutputStream: TextOutputStream {
 /// A wrapper to facilitate `print`-ing to stderr and stdio.
 /// Unlike `StdioOutputStream`, provides no locking on the underlying `FILE`.
 /// Cross-thread interleaving of output is expected to be handled externally.
-internal struct NonLockingStdioOutputStream: TextOutputStream {
+internal struct NonLockingStdioOutputStream: TextOutputStream & Flushable {
     #if canImport(WASILibc)
     internal let file: OpaquePointer
     #else
@@ -111,6 +115,8 @@ internal struct NonLockingStdioOutputStream: TextOutputStream {
 
     internal static let stderr = NonLockingStdioOutputStream(file: systemStderr, flushMode: .always)
     internal static let stdout = NonLockingStdioOutputStream(file: systemStdout, flushMode: .always)
+    internal static let noFlushStderr = NonLockingStdioOutputStream(file: systemStderr, flushMode: .undefined)
+    internal static let noFlushStdout = NonLockingStdioOutputStream(file: systemStdout, flushMode: .undefined)
 
     /// Defines the flushing strategy for the underlying stream.
     internal enum FlushMode {

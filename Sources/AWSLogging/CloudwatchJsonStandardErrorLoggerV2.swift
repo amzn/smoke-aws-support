@@ -42,7 +42,7 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     public var logLevel: Logger.Level
     
     private let entryStream: AsyncStream<LogEntry>
-    private let stream: TextOutputStream
+    private let stream: TextOutputStream & Flushable
     private let entryHandler: (LogEntry) -> ()
     private let entryQueueFinishHandler: () -> ()
     private let metadataTypes: [String: MetadataType]
@@ -74,7 +74,7 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
         self.entryStream = rawEntryStream
         self.entryHandler = newEntryHandler
         self.entryQueueFinishHandler = newEntryQueueFinishHandler
-        self.stream = NonLockingStdioOutputStream.stderr
+        self.stream = NonLockingStdioOutputStream.noFlushStderr
     }
     
     public func shutdown() {
@@ -86,12 +86,7 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     // is called.
     public func run() async {
         for await logEntry in self.entryStream {
-            let jsonMessage = logEntry.getJsonMessage(globalMetadata: self.metadata,
-                                                      metadataTypes: self.metadataTypes)
-            
-            // get a mutable version of the stream
-            var stream = self.stream
-            stream.write("\(jsonMessage)\n")
+            logEntry.writeJsonMessage(to: self.stream, globalMetadata: self.metadata, metadataTypes: self.metadataTypes)
         }
     }
     
@@ -136,8 +131,9 @@ internal struct LogEntry {
     let function: String
     let line: UInt
 
-    func getJsonMessage(globalMetadata: Logger.Metadata,
-                        metadataTypes: [String: MetadataType]) -> String {
+    func writeJsonMessage(to stream: TextOutputStream & Flushable,
+                          globalMetadata: Logger.Metadata,
+                          metadataTypes: [String: MetadataType]) {
         let shortFileName: String
         if let range = self.file.range(of: "Sources/") {
             let startIndex = self.file.index(range.lowerBound, offsetBy: sourcesSubString.count)
@@ -180,7 +176,13 @@ internal struct LogEntry {
         jsonValues.append(("message", .string("\(self.message)")))
         
         let sortedJsonValues = jsonValues.sorted { $0.0 < $1.0 }
+        let jsonObject: JSONValue = .object(sortedJsonValues)
         
-        return sortedJsonValues.jsonString
+        // get a mutable version of the stream
+        var mutableStream: TextOutputStream = stream
+        jsonObject.appendBytes(to: &mutableStream)
+        mutableStream.write("\n")
+        var flushableStream: Flushable = stream
+        flushableStream.flush()
     }
 }

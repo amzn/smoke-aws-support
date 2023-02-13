@@ -9,32 +9,32 @@ internal enum JSONValue {
 
 extension JSONValue {
     // minimal JSON serialization required for log entries
-    public func appendBytes(to bytes: inout [UInt8]) {
+    public func appendBytes(to stream: inout TextOutputStream) {
         switch self {
         case .string(let string):
-            self.encodeString(string, to: &bytes)
+            self.encodeString(string, to: &stream)
         case .number(let string):
-            bytes.append(contentsOf: string.utf8)
+            stream.write(string)
         case .object(let dict):
             var iterator = dict.makeIterator()
-            bytes.append(UInt8(ascii: "{"))
+            stream.write(UInt8(ascii: "{").string)
             if let (key, value) = iterator.next() {
-                self.encodeString(key, to: &bytes)
-                bytes.append(UInt8(ascii: ":"))
-                value.appendBytes(to: &bytes)
+                self.encodeString(key, to: &stream)
+                stream.write(UInt8(ascii: ":").string)
+                value.appendBytes(to: &stream)
             }
             while let (key, value) = iterator.next() {
-                bytes.append(UInt8(ascii: ","))
-                self.encodeString(key, to: &bytes)
-                bytes.append(UInt8(ascii: ":"))
-                value.appendBytes(to: &bytes)
+                stream.write(UInt8(ascii: ",").string)
+                self.encodeString(key, to: &stream)
+                stream.write(UInt8(ascii: ":").string)
+                value.appendBytes(to: &stream)
             }
-            bytes.append(UInt8(ascii: "}"))
+            stream.write(UInt8(ascii: "}").string)
         }
     }
 
-    private func encodeString(_ string: String, to bytes: inout [UInt8]) {
-        bytes.append(UInt8(ascii: "\""))
+    private func encodeString(_ string: String, to stream: inout TextOutputStream) {
+        stream.write(UInt8(ascii: "\"").string)
         let stringBytes = string.utf8
         var startCopyIndex = stringBytes.startIndex
         var nextIndex = startCopyIndex
@@ -48,7 +48,8 @@ extension JSONValue {
                 // through U+001F).
                 // https://tools.ietf.org/html/rfc8259#section-7
                 // copy the current range over
-                bytes.append(contentsOf: stringBytes[startCopyIndex ..< nextIndex])
+                stream.write(stringBytes[startCopyIndex ..< nextIndex].string)
+                var bytes = [UInt8]()
                 switch stringBytes[nextIndex] {
                 case UInt8(ascii: "\""): // quotation mark
                     bytes.append(UInt8(ascii: "\\"))
@@ -91,6 +92,7 @@ extension JSONValue {
                     bytes.append(valueToAscii(first))
                     bytes.append(valueToAscii(remaining))
                 }
+                stream.write(bytes.string)
 
                 nextIndex = stringBytes.index(after: nextIndex)
                 startCopyIndex = nextIndex
@@ -100,7 +102,25 @@ extension JSONValue {
         }
 
         // copy everything, that hasn't been copied yet
-        bytes.append(contentsOf: stringBytes[startCopyIndex ..< nextIndex])
-        bytes.append(UInt8(ascii: "\""))
+        stream.write(stringBytes[startCopyIndex ..< nextIndex].string)
+        stream.write(UInt8(ascii: "\"").string)
+    }
+}
+
+private extension UInt8 {
+    var string: String {
+        return String(bytes: [self], encoding: .utf8) ?? ""
+    }
+}
+
+private extension Array where Element == UInt8 {
+    var string: String {
+        return String(bytes: self, encoding: .utf8) ?? ""
+    }
+}
+
+private extension Substring.UTF8View {
+    var string: String {
+        return String(bytes: self, encoding: .utf8) ?? ""
     }
 }

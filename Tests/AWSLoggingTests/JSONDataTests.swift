@@ -7,6 +7,18 @@
 import XCTest
 import Logging
 
+class StringStream: TextOutputStream & Flushable {
+    var buffer: String = ""
+    
+    func write(_ string: String) {
+        buffer.write(string)
+    }
+    
+    func flush() {
+        // nothing to do
+    }
+}
+
 class JSONDataTests: XCTestCase {
 
     func testSimpleJSONString() async throws {
@@ -17,14 +29,22 @@ class JSONDataTests: XCTestCase {
         let expected =
             #"{"field1":"value1","field2":62}"#
                 
-        XCTAssertEqual(expected, fields.jsonString)
+        let jsonObject: JSONValue = .object(fields)
+        let stringStream = StringStream()
+        var output: TextOutputStream = stringStream
+        jsonObject.appendBytes(to: &output)
+        XCTAssertEqual(expected, stringStream.buffer)
     }
     
     func testEscapedJSONString() async throws {
         let fields1: [(String, JSONValue)] = [("field1", .string("value1")),
                                              ("field2", .number("62"))
         ]
-        let jsonString1 = fields1.jsonString
+        let jsonObject1: JSONValue = .object(fields1)
+        let stringStream1 = StringStream()
+        var output1: TextOutputStream = stringStream1
+        jsonObject1.appendBytes(to: &output1)
+        let jsonString1 = stringStream1.buffer
         
         let fields2: [(String, JSONValue)] = [("fields", .string(jsonString1)),
                                              ("field22", .number("88"))
@@ -34,7 +54,11 @@ class JSONDataTests: XCTestCase {
         let expected =
             #"{"fields":"{\"field1\":\"value1\",\"field2\":62}","field22":88}"#
                 
-        XCTAssertEqual(expected, fields2.jsonString)
+        let jsonObject2: JSONValue = .object(fields2)
+        let stringStream2 = StringStream()
+        var output2: TextOutputStream = stringStream2
+        jsonObject2.appendBytes(to: &output2)
+        XCTAssertEqual(expected, stringStream2.buffer)
     }
     
     func testLogEntry() async throws {
@@ -49,13 +73,14 @@ class JSONDataTests: XCTestCase {
                                 file: "/Prefix/Packages/smoke-aws-support/Sources/AWSLogging/CloudwatchJsonStandardErrorLoggerV2.swift",
                                 function: "MyFunction",
                                 line: 52)
-        
-        let jsonMessage = logEntry.getJsonMessage(globalMetadata: globalMetadata, metadataTypes: ["field2" : MetadataType.Int])
-        
+                
         let expected =
             #"{"field1":"Value1","field2":45,"field3":"Value4","fileName":"AWSLogging/CloudwatchJsonStandardErrorLoggerV2.swift""#
             + #","function":"MyFunction","level":"info","line":52,"message":"This is the message"}"#
+            + "\n"
                 
-        XCTAssertEqual(expected, jsonMessage)
+        let stringStream = StringStream()
+        logEntry.writeJsonMessage(to: stringStream, globalMetadata: globalMetadata, metadataTypes: ["field2" : MetadataType.Int])
+        XCTAssertEqual(expected, stringStream.buffer)
     }
 }
