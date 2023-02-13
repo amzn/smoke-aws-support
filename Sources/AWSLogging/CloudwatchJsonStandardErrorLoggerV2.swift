@@ -46,7 +46,6 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     private let entryHandler: (LogEntry) -> ()
     private let entryQueueFinishHandler: () -> ()
     private let metadataTypes: [String: MetadataType]
-    private let offTaskAsyncExecutor = OffTaskAsyncExecutor()
     
     private init(minimumLogLevel: Logger.Level,
                  metadataTypes: [String: MetadataType]) {
@@ -87,9 +86,7 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     // is called.
     public func run() async {
         for await logEntry in self.entryStream {
-            await self.offTaskAsyncExecutor.execute(qos: .utility) {
-                logEntry.writeJsonMessage(to: self.stream, globalMetadata: self.metadata, metadataTypes: self.metadataTypes)
-            }
+            logEntry.writeJsonMessage(to: self.stream, globalMetadata: self.metadata, metadataTypes: self.metadataTypes)
         }
     }
     
