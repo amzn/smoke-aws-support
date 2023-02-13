@@ -9,41 +9,27 @@ internal enum JSONValue {
 
 extension JSONValue {
     // minimal JSON serialization required for log entries
-    public func appendBytes(identBy: Int = 1, to bytes: inout [UInt8]) {
+    public func appendBytes(to bytes: inout [UInt8]) {
         switch self {
         case .string(let string):
             self.encodeString(string, to: &bytes)
         case .number(let string):
             bytes.append(contentsOf: string.utf8)
-        case .object(let array):
-            var iterator = array.makeIterator()
+        case .object(let dict):
+            var iterator = dict.makeIterator()
             bytes.append(UInt8(ascii: "{"))
-            bytes.append(UInt8(ascii: "\n"))
             if let (key, value) = iterator.next() {
-                self.indent(by: identBy, to: &bytes)
                 self.encodeString(key, to: &bytes)
                 bytes.append(UInt8(ascii: ":"))
-                bytes.append(UInt8(ascii: " "))
-                value.appendBytes(identBy: identBy + 1, to: &bytes)
+                value.appendBytes(to: &bytes)
             }
             while let (key, value) = iterator.next() {
                 bytes.append(UInt8(ascii: ","))
-                bytes.append(UInt8(ascii: "\n"))
-                self.indent(by: identBy, to: &bytes)
                 self.encodeString(key, to: &bytes)
                 bytes.append(UInt8(ascii: ":"))
-                bytes.append(UInt8(ascii: " "))
-                value.appendBytes(identBy: identBy + 1, to: &bytes)
+                value.appendBytes(to: &bytes)
             }
-            bytes.append(UInt8(ascii: "\n"))
             bytes.append(UInt8(ascii: "}"))
-        }
-    }
-    
-    private func indent(by: Int, to bytes: inout [UInt8]) {
-        let indentCount = 4 * by
-        (0..<indentCount).forEach { _ in
-            bytes.append(UInt8(ascii: " "))
         }
     }
 

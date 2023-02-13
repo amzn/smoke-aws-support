@@ -14,12 +14,8 @@ class JSONDataTests: XCTestCase {
                                              ("field2", .number("62"))
         ]
         
-        let expected = """
-            {
-                "field1": "value1",
-                "field2": 62
-            }
-            """
+        let expected =
+            #"{"field1":"value1","field2":62}"#
                 
         XCTAssertEqual(expected, fields.jsonString)
     }
@@ -34,13 +30,9 @@ class JSONDataTests: XCTestCase {
                                              ("field22", .number("88"))
         ]
         
-        // Use a raw multi-line string to compare escaping
-        let expected = #"""
-            {
-                "fields": "{\n    \"field1\": \"value1\",\n    \"field2\": 62\n}",
-                "field22": 88
-            }
-            """#
+        // Use a raw string to compare escaping
+        let expected =
+            #"{"fields":"{\"field1\":\"value1\",\"field2\":62}","field22":88}"#
                 
         XCTAssertEqual(expected, fields2.jsonString)
     }
@@ -60,18 +52,9 @@ class JSONDataTests: XCTestCase {
         
         let jsonMessage = logEntry.getJsonMessage(globalMetadata: globalMetadata, metadataTypes: ["field2" : MetadataType.Int])
         
-        let expected = """
-            {
-                "field1": "Value1",
-                "field2": 45,
-                "field3": "Value4",
-                "fileName": "AWSLogging/CloudwatchJsonStandardErrorLoggerV2.swift",
-                "function": "MyFunction",
-                "level": "info",
-                "line": 52,
-                "message": "This is the message"
-            }
-            """
+        let expected =
+            #"{"field1":"Value1","field2":45,"field3":"Value4","fileName":"AWSLogging/CloudwatchJsonStandardErrorLoggerV2.swift""#
+            + #","function":"MyFunction","level":"info","line":52,"message":"This is the message"}"#
                 
         XCTAssertEqual(expected, jsonMessage)
     }
