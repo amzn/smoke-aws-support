@@ -17,10 +17,9 @@
 
 import Foundation
 import Logging
-import NIOHTTP1
-import AsyncHTTPClient
 import AWSCore
 import SmokeHTTPClient
+import ClientRuntime
 
 public struct AWSClientInvocationDelegate : HTTPClientInvocationDelegate {
     public var specifyContentHeadersForZeroLengthBody: Bool
@@ -104,12 +103,12 @@ public struct AWSClientInvocationDelegate : HTTPClientInvocationDelegate {
         return headers
     }
     
-    public func handleErrorResponses<InvocationReportingType>(response: HTTPClient.Response, responseBodyData: Data?,
+    public func handleErrorResponses<InvocationReportingType>(response: HttpResponse, responseBodyData: Data?,
                                                               invocationReporting: InvocationReportingType) -> SmokeHTTPClient.HTTPClientError?
         where InvocationReportingType : HTTPClientInvocationReporting {
         // Place the permanently moved location into the HTTPError
-        if case .movedPermanently = response.status {
-            let locationHeader = response.headers["Location"]
+        if case .movedPermanently = response.statusCode {
+            let locationHeader = response.headers.values(for: "Location") ?? []
             let location = locationHeader.count > 0 ? locationHeader[0] : "<unknown>"
             let cause = HTTPError.movedPermanently(location: location)
             return HTTPClientError(responseCode: 301, cause: cause)

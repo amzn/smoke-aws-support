@@ -16,8 +16,6 @@
 //
 
 import Foundation
-import NIOHTTP1
-import NIOSSL
 import XMLCoding
 import AWSCore
 import Logging
@@ -25,7 +23,8 @@ import SmokeHTTPClient
 import QueryCoding
 import HTTPHeadersCoding
 import HTTPPathCoding
-import AsyncHTTPClient
+import ClientRuntime
+import AwsCommonRuntimeKit
 
 extension CharacterSet {
     public static let uriAWSQueryValueAllowed: CharacterSet = ["~", "-", ".", "0", "1", "2", "3", "4",
@@ -123,16 +122,16 @@ struct ErrorWrapper<ErrorType: Error & Decodable>: Error & Decodable {
 public struct XMLAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClientDelegate {
     private let requiresTLS: Bool
     private let inputBodyRootKey: String?
-    private let outputListDecodingStrategy: XMLDecoder.ListDecodingStrategy?
-    private let outputMapDecodingStrategy: XMLDecoder.MapDecodingStrategy?
+    private let outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?
+    private let outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy?
     private let inputQueryMapEncodingStrategy: QueryEncoder.MapEncodingStrategy
     private let inputQueryListEncodingStrategy: QueryEncoder.ListEncodingStrategy
     private let inputQueryKeyEncodingStrategy: QueryEncoder.KeyEncodingStrategy
     private let inputQueryKeyEncodeTransformStrategy: QueryEncoder.KeyEncodeTransformStrategy
     
     public init(requiresTLS: Bool, inputBodyRootKey: String? = nil,
-                outputListDecodingStrategy: XMLDecoder.ListDecodingStrategy? = nil,
-                outputMapDecodingStrategy: XMLDecoder.MapDecodingStrategy? = nil,
+                outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy? = nil,
+                outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy? = nil,
                 inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy = .singleQueryEntry,
                 inputQueryListEncodingStrategy: QueryEncoder.ListEncodingStrategy = .expandListWithIndex,
                 inputQueryKeyEncodingStrategy: QueryEncoder.KeyEncodingStrategy = .useAsShapeSeparator("."),
@@ -148,11 +147,11 @@ public struct XMLAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClient
     }
     
     public func getResponseError<InvocationReportingType: HTTPClientInvocationReporting>(
-            response: HTTPClient.Response,
+            response: HttpResponse,
             responseComponents: HTTPResponseComponents,
             invocationReporting: InvocationReportingType) throws -> SmokeHTTPClient.HTTPClientError {
         guard let bodyData = responseComponents.body else {
-            throw HTTPError.unknownError("Error with status '\(response.status)' with empty body")
+            throw HTTPError.unknownError("Error with status '\(response.statusCode)' with empty body")
         }
         
         // Convert bodyData to a debug string only if debug logging is enabled
@@ -161,7 +160,7 @@ public struct XMLAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClient
         
         let cause = try ErrorWrapper<ErrorType>.errorFromBodyData(errorType: ErrorType.self, bodyData: bodyData)
         
-        return HTTPClientError(responseCode: Int(response.status.code), cause: cause)
+        return HTTPClientError(responseCode: Int(response.statusCode.rawValue), cause: cause)
     }
     
     public func encodeInputAndQueryString<InputType, InvocationReportingType: HTTPClientInvocationReporting>(
@@ -209,7 +208,7 @@ public struct XMLAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClient
                 body = Data()
             }
 
-            let query: String
+            let queryItems: [URLQueryItem]
             if let queryEncodable = input.queryEncodable {
                 let queryEncoder = QueryEncoder(
                     keyEncodingStrategy: self.inputQueryKeyEncodingStrategy,
@@ -217,21 +216,13 @@ public struct XMLAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClient
                     listEncodingStrategy: self.inputQueryListEncodingStrategy,
                     keyEncodeTransformStrategy: self.inputQueryKeyEncodeTransformStrategy)
 
-                let encodedQuery = try queryEncoder.encode(queryEncodable,
-                                                           allowedCharacterSet: .uriAWSQueryValueAllowed)
-
-                if !encodedQuery.isEmpty {
-                    query = "?" + encodedQuery
-                } else {
-                    query = ""
-                }
+                queryItems = try queryEncoder.encodeAsQueryItems(queryEncodable,
+                                                                 allowedCharacterSet: .uriAWSQueryValueAllowed)
             } else {
-                query = ""
+                queryItems = []
             }
-
-            let pathWithQuery = path + query
             
-            return HTTPRequestComponents(pathWithQuery: pathWithQuery,
+            return HTTPRequestComponents(path: path, queryItems: queryItems,
                                          additionalHeaders: additionalHeaders,
                                          body: body)
     }
@@ -274,9 +265,9 @@ public struct XMLAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClient
                                       headersDecodableProvider: headersDecodableProvider)
     }
     
-    public func getTLSConfiguration() -> TLSConfiguration? {
+    public func getTLSConnectionOptions() -> TLSConnectionOptions? {
         if requiresTLS {
-            return getDefaultTLSConfiguration()
+            return getDefaultTLSConnectionOptions()
         } else {
             return nil
         }

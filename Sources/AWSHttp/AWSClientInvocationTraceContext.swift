@@ -17,8 +17,7 @@
 import Foundation
 import Logging
 import SmokeHTTPClient
-import AsyncHTTPClient
-import NIOHTTP1
+import ClientRuntime
 
 private let xAmzRequestId = "x-amz-request-id"
 private let xAmzRequestIdAlt = "x-amzn-RequestId"    
@@ -40,8 +39,8 @@ public struct AWSClientInvocationTraceContext: InvocationTraceContext {
         self.log4xxResponsesAsError = log4xxResponsesAsError
     }
     
-    public func handleOutwardsRequestStart(method: HTTPMethod, uri: String, logger: Logger, internalRequestId: String,
-                                           headers: inout HTTPHeaders, bodyData: Data) -> String {
+    public func handleOutwardsRequestStart(method: HttpMethodType, uri: Endpoint, logger: Logger, internalRequestId: String,
+                                           headers: inout Headers, bodyData: Data) -> String {
         guard self.traceLoggingEnabled else {
             return ""
         }
@@ -58,7 +57,7 @@ public struct AWSClientInvocationTraceContext: InvocationTraceContext {
     }
     
     public func handleOutwardsRequestSuccess(outwardsRequestContext: String?, logger: Logger, internalRequestId: String,
-                                             response: HTTPClient.Response, bodyData: Data?) {
+                                             response: HttpResponse, bodyData: Data?) {
         guard self.traceLoggingEnabled else {
             return
         }
@@ -68,7 +67,7 @@ public struct AWSClientInvocationTraceContext: InvocationTraceContext {
     }
     
     public func handleOutwardsRequestFailure(outwardsRequestContext: String?, logger: Logger, internalRequestId: String,
-                                             response: HTTPClient.Response?, bodyData: Data?, error: Error) {
+                                             response: HttpResponse?, bodyData: Data?, error: Error) {
         guard self.traceLoggingEnabled else {
             return
         }
@@ -84,7 +83,7 @@ public struct AWSClientInvocationTraceContext: InvocationTraceContext {
                       response: response, bodyData: bodyData, error: error)
     }
     
-    private func logCompletion(logger: Logger, level: Logger.Level, successfullyCompletedRequest: Bool, response: HTTPClient.Response?, bodyData: Data?,
+    private func logCompletion(logger: Logger, level: Logger.Level, successfullyCompletedRequest: Bool, response: HttpResponse?, bodyData: Data?,
                                error: Error?) {
         let completionString = successfullyCompletedRequest ? "Successfully" : "Unsuccessfully"
         
@@ -94,18 +93,18 @@ public struct AWSClientInvocationTraceContext: InvocationTraceContext {
             metadata["error"] = "\(errorUnwrapped)"
         }
         
-        if let code = response?.status.code {
+        if let code = response?.statusCode.rawValue {
             metadata["code"] = "\(code)"
         }
         
         // check the variants of request id
-        if let requestIds = response?.headers[xAmzRequestId], !requestIds.isEmpty {
+        if let requestIds = response?.headers.values(for: xAmzRequestId), !requestIds.isEmpty {
             metadata["\(xAmzRequestId)"] = "\(requestIds.joined(separator: ","))"
-        } else if let requestIds = response?.headers[xAmzRequestIdAlt], !requestIds.isEmpty {
+        } else if let requestIds = response?.headers.values(for: xAmzRequestIdAlt), !requestIds.isEmpty {
             metadata["\(xAmzRequestId)"] = "\(requestIds.joined(separator: ","))"
         }
         
-        if let id2s = response?.headers[xAmzId2], !id2s.isEmpty {
+        if let id2s = response?.headers.values(for: xAmzId2), !id2s.isEmpty {
             metadata["\(xAmzId2)"] = "\(id2s.joined(separator: ","))"
         }
         
@@ -121,13 +120,13 @@ public struct AWSClientInvocationTraceContext: InvocationTraceContext {
     }
 }
 
-internal extension HTTPClient.Response {
+internal extension HttpResponse {
     func logResponseAsError(log4xxResponsesAsError: Bool) -> Bool {
         // if this is a server error
-        if self.status.code >= 500 && self.status.code < 600 {
+        if self.statusCode.rawValue >= 500 && self.statusCode.rawValue < 600 {
             return true
         // if this is a client error and log4xxResponsesAsError is true
-        } else if log4xxResponsesAsError && self.status.code >= 400 && self.status.code < 500 {
+        } else if log4xxResponsesAsError && self.statusCode.rawValue >= 400 && self.statusCode.rawValue < 500 {
             return true
         }
         

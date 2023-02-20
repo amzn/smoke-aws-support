@@ -16,15 +16,14 @@
 //
 
 import Foundation
-import NIOHTTP1
-import NIOSSL
 import XMLCoding
 import AWSCore
 import SmokeHTTPClient
 import QueryCoding
 import HTTPHeadersCoding
 import HTTPPathCoding
-import AsyncHTTPClient
+import ClientRuntime
+import AwsCommonRuntimeKit
 
 /**
  Struct conforming to the AWSHttpClientDelegate protocol that encodes request query items into the body and
@@ -40,8 +39,8 @@ public struct FormEncodedXMLAWSHttpClientDelegate<ErrorType: Error & Decodable>:
     private let inputQueryKeyEncodeTransformStrategy: QueryEncoder.KeyEncodeTransformStrategy
 
     public init(requiresTLS: Bool, inputBodyRootKey: String? = nil,
-                outputListDecodingStrategy: XMLDecoder.ListDecodingStrategy? = nil,
-                outputMapDecodingStrategy: XMLDecoder.MapDecodingStrategy? = nil,
+                outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy? = nil,
+                outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy? = nil,
                 inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy = .singleQueryEntry,
                 inputQueryListEncodingStrategy: QueryEncoder.ListEncodingStrategy = .expandListWithIndex,
                 inputQueryKeyEncodingStrategy: QueryEncoder.KeyEncodingStrategy = .useAsShapeSeparator("."),
@@ -63,7 +62,7 @@ public struct FormEncodedXMLAWSHttpClientDelegate<ErrorType: Error & Decodable>:
     }
 
     public func getResponseError<InvocationReportingType: HTTPClientInvocationReporting>(
-            response: HTTPClient.Response,
+            response: HttpResponse,
             responseComponents: HTTPResponseComponents,
             invocationReporting: InvocationReportingType) throws -> SmokeHTTPClient.HTTPClientError {
         return try self.clientDelegate.getResponseError(response: response,
@@ -119,7 +118,7 @@ public struct FormEncodedXMLAWSHttpClientDelegate<ErrorType: Error & Decodable>:
                 throw SmokeAWSError.invalidRequest("Input must have query items.")
             }
 
-            return HTTPRequestComponents(pathWithQuery: path,
+            return HTTPRequestComponents(path: path, queryItems: [],
                                          additionalHeaders: additionalHeaders,
                                          body: Data(encodedQuery.utf8))
     }
@@ -132,8 +131,8 @@ public struct FormEncodedXMLAWSHttpClientDelegate<ErrorType: Error & Decodable>:
                                                     headers: headers,
                                                     invocationReporting: invocationReporting)
     }
-
-    public func getTLSConfiguration() -> TLSConfiguration? {
-        return self.clientDelegate.getTLSConfiguration()
+    
+    public func getTLSConnectionOptions() -> TLSConnectionOptions? {
+        return getDefaultTLSConnectionOptions()
     }
 }

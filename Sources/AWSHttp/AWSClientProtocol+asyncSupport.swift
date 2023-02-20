@@ -19,17 +19,14 @@
 
 import SmokeHTTPClient
 import AWSCore
-import NIO
-import NIOHTTP1
-import NIOTransportServices
-import AsyncHTTPClient
+import ClientRuntime
 
 public extension AWSClientProtocol {
     func executeWithoutOutput<InvocationReportingType: HTTPClientInvocationReporting,
                               InputType: HTTPRequestInputProtocol, ErrorType: ConvertableError>(
             httpClient: HTTPOperationsClient,
             endpointPath: String = "/",
-            httpMethod: HTTPMethod = .POST,
+            httpMethod: HttpMethodType = .post,
             requestInput: InputType,
             operation: String,
             reporting: InvocationReportingType,
@@ -64,7 +61,7 @@ public extension AWSClientProtocol {
                            InputType: HTTPRequestInputProtocol, ErrorType: ConvertableError>(
             httpClient: HTTPOperationsClient,
             endpointPath: String = "/",
-            httpMethod: HTTPMethod = .POST,
+            httpMethod: HttpMethodType = .post,
             requestInput: InputType,
             operation: String,
             reporting: InvocationReportingType,

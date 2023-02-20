@@ -16,8 +16,6 @@
 //
 
 import Foundation
-import NIOHTTP1
-import NIOSSL
 import SmokeHTTPClient
 import AWSCore
 import QueryCoding
@@ -25,7 +23,8 @@ import HTTPHeadersCoding
 import HTTPPathCoding
 import XMLCoding
 import Logging
-import AsyncHTTPClient
+import ClientRuntime
+import AwsCommonRuntimeKit
 
 enum DataAWSHttpClientDelegateError: Error {
     case invalidPayloadNotData
@@ -50,16 +49,16 @@ public struct DataAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClien
     }
     
     public func getResponseError<InvocationReportingType: HTTPClientInvocationReporting>(
-            response: HTTPClient.Response,
+            response: HttpResponse,
             responseComponents: HTTPResponseComponents,
             invocationReporting: InvocationReportingType) throws -> SmokeHTTPClient.HTTPClientError {
         guard let bodyData = responseComponents.body else {
-            throw HTTPError.unknownError("Error with status '\(response.status)' with empty body")
+            throw HTTPError.unknownError("Error with status '\(response.statusCode)' with empty body")
         }
         
         var cause: Error
         if let errorTypeHTTPHeader = self.errorTypeHTTPHeader,
-           let errorType = response.headers.first(name: errorTypeHTTPHeader) {
+           let errorType = response.headers.value(for: errorTypeHTTPHeader) {
             let typedError: ErrorType = try getErrorFromResponseAndBody(errorTypeHTTPHeaderValue: errorType,
                                                                         bodyData: bodyData,
                                                                         logger: invocationReporting.logger)
@@ -72,7 +71,7 @@ public struct DataAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClien
             cause = try ErrorWrapper<ErrorType>.errorFromBodyData(errorType: ErrorType.self, bodyData: bodyData)
         }
         
-        return HTTPClientError(responseCode: Int(response.status.code), cause: cause)
+        return HTTPClientError(responseCode: Int(response.statusCode.rawValue), cause: cause)
     }
     
     public func encodeInputAndQueryString<InputType, InvocationReportingType: HTTPClientInvocationReporting>(
@@ -116,7 +115,7 @@ public struct DataAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClien
                 body = Data()
             }
             
-            let query: String
+            let queryItems: [URLQueryItem]
             if let queryEncodable = input.queryEncodable {
                 let queryEncoder: QueryEncoder
                 if let inputQueryMapDecodingStrategy = inputQueryMapDecodingStrategy {
@@ -124,21 +123,13 @@ public struct DataAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClien
                 } else {
                     queryEncoder = QueryEncoder()
                 }
-                let encodedQuery = try queryEncoder.encode(queryEncodable,
-                                                           allowedCharacterSet: .uriAWSQueryValueAllowed)
-                
-                if !encodedQuery.isEmpty {
-                    query = "?" + encodedQuery
-                } else {
-                    query = ""
-                }
+                queryItems = try queryEncoder.encodeAsQueryItems(queryEncodable,
+                                                                 allowedCharacterSet: .uriAWSQueryValueAllowed)
             } else {
-                query = ""
+                queryItems = []
             }
             
-            let pathWithQuery = path + query
-            
-            return HTTPRequestComponents(pathWithQuery: pathWithQuery,
+            return HTTPRequestComponents(path: path, queryItems: queryItems,
                                          additionalHeaders: additionalHeaders,
                                          body: body)
     }
@@ -182,9 +173,9 @@ public struct DataAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClien
                                       headersDecodableProvider: headersDecodableProvider)
     }
     
-    public func getTLSConfiguration() -> TLSConfiguration? {
+    public func getTLSConnectionOptions() -> TLSConnectionOptions? {
         if requiresTLS {
-            return getDefaultTLSConfiguration()
+            return getDefaultTLSConnectionOptions()
         } else {
             return nil
         }

@@ -20,12 +20,11 @@ let package = Package(
             targets: ["AWSLogging"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.33.0"),
         .package(url: "https://github.com/apple/swift-crypto.git", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-log", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-metrics.git", "1.0.0"..<"3.0.0"),
         .package(url: "https://github.com/LiveUI/XMLCoding.git", from: "0.4.1"),
-        .package(url: "https://github.com/amzn/smoke-http.git", from: "2.15.0"),
+        .package(path: "/Users/simonpi/Packages/smoke-http"),
     ],
     targets: [
         .target(
@@ -39,8 +38,6 @@ let package = Package(
         .target(
             name: "AWSHttp", dependencies: [
                 .product(name: "Logging", package: "swift-log"),
-                .product(name: "NIO", package: "swift-nio"),
-                .product(name: "NIOHTTP1", package: "swift-nio"),
                 .target(name: "AWSCore"),
                 .product(name: "SmokeHTTPClient", package: "smoke-http"),
                 .product(name: "QueryCoding", package: "smoke-http"),
