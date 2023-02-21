@@ -259,5 +259,6 @@ public struct AWSHTTPMiddlewareStack<ErrorType: Error & Decodable>: AWSHTTPMiddl
         SDKContentHeadersMiddleware<Context>(specifyContentHeadersForZeroLengthBody: self.specifyContentHeadersForZeroLengthBody, contentType: self.contentType)
         SDKHeaderMiddleware<Context>.userAgent
         SDKHeaderMiddleware<Context>.accept
+        SDKHTTPMethodMiddleware<Context>(methodType: httpMethod)
     }
 }
