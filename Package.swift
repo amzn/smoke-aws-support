@@ -16,6 +16,9 @@ let package = Package(
             name: "AWSHttp",
             targets: ["AWSHttp"]),
         .library(
+            name: "AWSMiddleware",
+            targets: ["AWSMiddleware"]),
+        .library(
             name: "AWSLogging",
             targets: ["AWSLogging"]),
     ],
@@ -25,7 +28,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-metrics.git", "1.0.0"..<"3.0.0"),
         .package(url: "https://github.com/LiveUI/XMLCoding.git", from: "0.4.1"),
-        .package(url: "https://github.com/amzn/smoke-http.git", from: "2.15.0"),
+        .package(url: "https://github.com/amzn/smoke-http.git", branch: "smoke_http_middleware"),
     ],
     targets: [
         .target(
@@ -47,6 +50,19 @@ let package = Package(
                 .product(name: "HTTPPathCoding", package: "smoke-http"),
                 .product(name: "HTTPHeadersCoding", package: "smoke-http"),
                 .product(name: "Crypto", package: "swift-crypto"),
+            ]
+        ),
+        .target(
+            name: "AWSMiddleware", dependencies: [
+                .target(name: "AWSCore"),
+                .target(name: "AWSHttp"),
+                .product(name: "Logging", package: "swift-log"),
+                .product(name: "Metrics", package: "swift-metrics"),
+                .product(name: "SmokeHTTPMiddleware", package: "smoke-http"),
+                .product(name: "SmokeHTTPClient", package: "smoke-http"),
+                .product(name: "QueryCoding", package: "smoke-http"),
+                .product(name: "HTTPPathCoding", package: "smoke-http"),
+                .product(name: "HTTPHeadersCoding", package: "smoke-http"),
             ]
         ),
         .target(
