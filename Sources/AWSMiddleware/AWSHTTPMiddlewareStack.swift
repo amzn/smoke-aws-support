@@ -25,6 +25,10 @@ import AWSCore
 public protocol AWSHTTPMiddlewareStackProtocol {
     associatedtype ErrorType: Error & Decodable
     
+    init(credentialsProvider: CredentialsProvider, awsRegion: AWSRegion, service: String, operation: String?,
+                target: String?, isV4SignRequest: Bool, signAllHeaders: Bool, endpointHostName: String, endpointPort: Int,
+                contentType: String, specifyContentHeadersForZeroLengthBody: Bool)
+    
     func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlwareType: MiddlewareProtocol,
                         OuterMiddlwareType: MiddlewareProtocol, InwardTransformerType: TransformProtocol, OutwardTransformerType: TransformProtocol,
                         Context: AWSMiddlewareContext>(
