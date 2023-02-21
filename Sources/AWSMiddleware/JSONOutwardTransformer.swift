@@ -36,8 +36,8 @@ public struct JSONOutwardTransformer<Output: HTTPResponseOutputProtocol, Context
             switch output.body {
             case .data(let data):
                 responseBodyOptional = data
-            case .stream(_):
-                throw HTTPError.badResponse("Unexpected stream response.")
+            case .stream(let reader):
+                responseBodyOptional = reader.toBytes().getData()
             case .none:
                 responseBodyOptional = nil
             }
