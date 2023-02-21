@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  JSONContentTypeMiddlewareTransformStack.swift
+//  JSONPayloadTransformStack.swift
 //  AWSMiddleware
 //
 
@@ -22,14 +22,14 @@ import QueryCoding
 import SmokeHTTPClient
 import AWSCore
 
-public protocol JSONContentTypeMiddlewareTransformStackProtocol: ContentTypeMiddlewareTransformStackProtocol {
+public protocol JSONPayloadTransformStackProtocol: PayloadTransformStackProtocol {
     init(inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?,
          credentialsProvider: CredentialsProvider, awsRegion: AWSRegion, service: String, operation: String?,
          target: String?, isV4SignRequest: Bool, signAllHeaders: Bool, endpointHostName: String, endpointPort: Int,
          contentType: String, specifyContentHeadersForZeroLengthBody: Bool)
 }
 
-public struct JSONContentTypeMiddlewareTransformStack<ErrorType: Error & Decodable>: JSONContentTypeMiddlewareTransformStackProtocol {
+public struct JSONPayloadTransformStack<ErrorType: Error & Decodable>: JSONPayloadTransformStackProtocol {
     public let inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?
     public let middlewareStack: StandardMiddlewareTransformStack<ErrorType>
     

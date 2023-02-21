@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  FormEncodedContentTypeMiddlewareTransformStack.swift
+//  XMLPayloadTransformStack.swift
 //  AWSMiddleware
 //
 
@@ -23,7 +23,7 @@ import SmokeHTTPClient
 import AWSCore
 import XMLCoding
 
-public protocol FormEncodedContentTypeMiddlewareTransformStackProtocol: ContentTypeMiddlewareTransformStackProtocol {
+public protocol XMLPayloadTransformStackProtocol: PayloadTransformStackProtocol {
     init(inputBodyRootKey: String?, outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?,
          outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy?,
          inputQueryMapEncodingStrategy: QueryEncoder.MapEncodingStrategy,
@@ -36,7 +36,7 @@ public protocol FormEncodedContentTypeMiddlewareTransformStackProtocol: ContentT
          contentType: String, specifyContentHeadersForZeroLengthBody: Bool)
 }
 
-public struct FormEncodedContentTypeMiddlewareTransformStack<ErrorType: Error & Decodable>: FormEncodedContentTypeMiddlewareTransformStackProtocol {
+public struct XMLPayloadTransformStack<ErrorType: Error & Decodable>: XMLPayloadTransformStackProtocol {
     public let inputBodyRootKey: String?
     public let outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?
     public let outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy?
@@ -76,13 +76,13 @@ public struct FormEncodedContentTypeMiddlewareTransformStack<ErrorType: Error & 
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
     where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == TransformedOutput,
-          InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
+    InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context {
-        let inwardTransform = FormEncodedInwardTransform<OriginalInput, Context>(httpPath: endpointPath, inputBodyRootKey: self.inputBodyRootKey,
-                                                                                 inputQueryMapEncodingStrategy: self.inputQueryMapEncodingStrategy,
-                                                                                 inputQueryListEncodingStrategy: self.inputQueryListEncodingStrategy,
-                                                                                 inputQueryKeyEncodingStrategy: self.inputQueryKeyEncodingStrategy,
-                                                                                 inputQueryKeyEncodeTransformStrategy: self.inputQueryKeyEncodeTransformStrategy)
+        let inwardTransform = XMLInwardTransform<OriginalInput, Context>(httpPath: endpointPath, inputBodyRootKey: self.inputBodyRootKey,
+                                                                         inputQueryMapEncodingStrategy: self.inputQueryMapEncodingStrategy,
+                                                                         inputQueryListEncodingStrategy: self.inputQueryListEncodingStrategy,
+                                                                         inputQueryKeyEncodingStrategy: self.inputQueryKeyEncodingStrategy,
+                                                                         inputQueryKeyEncodeTransformStrategy: self.inputQueryKeyEncodeTransformStrategy)
         let outwardTransform = XMLOutwardTransform<TransformedOutput, Context>(outputListDecodingStrategy: self.outputListDecodingStrategy,
                                                                                outputMapDecodingStrategy: self.outputMapDecodingStrategy)
         
@@ -101,11 +101,11 @@ public struct FormEncodedContentTypeMiddlewareTransformStack<ErrorType: Error & 
     where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == Void,
     InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context {
-        let inwardTransform = FormEncodedInwardTransform<OriginalInput, Context>(httpPath: endpointPath, inputBodyRootKey: self.inputBodyRootKey,
-                                                                                 inputQueryMapEncodingStrategy: self.inputQueryMapEncodingStrategy,
-                                                                                 inputQueryListEncodingStrategy: self.inputQueryListEncodingStrategy,
-                                                                                 inputQueryKeyEncodingStrategy: self.inputQueryKeyEncodingStrategy,
-                                                                                 inputQueryKeyEncodeTransformStrategy: self.inputQueryKeyEncodeTransformStrategy)
+        let inwardTransform = XMLInwardTransform<OriginalInput, Context>(httpPath: endpointPath, inputBodyRootKey: self.inputBodyRootKey,
+                                                                         inputQueryMapEncodingStrategy: self.inputQueryMapEncodingStrategy,
+                                                                         inputQueryListEncodingStrategy: self.inputQueryListEncodingStrategy,
+                                                                         inputQueryKeyEncodingStrategy: self.inputQueryKeyEncodingStrategy,
+                                                                         inputQueryKeyEncodeTransformStrategy: self.inputQueryKeyEncodeTransformStrategy)
         let outwardTransform = VoidOutwardTransform<Context>()
         
         return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,

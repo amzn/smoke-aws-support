@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  ContentTypeMiddlewareTransformStackProtocol.swift
+//  PayloadTransformStackProtocol.swift
 //  AWSMiddleware
 //
 
@@ -22,7 +22,7 @@
  import SmokeHTTPClient
  import AWSCore
  
- public protocol ContentTypeMiddlewareTransformStackProtocol {
+ public protocol PayloadTransformStackProtocol {
      //-- Input and Output
      func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
                   OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
@@ -50,7 +50,7 @@ public struct NoOpMiddleware<Input, Output, Context>: MiddlewareProtocol {
     }
 }
 
-public extension ContentTypeMiddlewareTransformStackProtocol {
+public extension PayloadTransformStackProtocol {
     //-- Input and Output
     
     func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
