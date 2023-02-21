@@ -34,7 +34,7 @@ public struct DataHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareStackProt
     public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlwareType: MiddlewareProtocol,
                         OuterMiddlwareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
         outerMiddleware: OuterMiddlwareType?, innerMiddleware: InnerMiddlwareType?,
-        input: OriginalInput, endpointOverride: URL?, endpointPath: String, httpMethod: HttpMethodType, context: Context,
+        input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
     where OuterMiddlwareType.Input == OriginalInput, OuterMiddlwareType.Output == TransformedOutput,
     InnerMiddlwareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlwareType.Output == HttpResponse,
@@ -46,5 +46,41 @@ public struct DataHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareStackProt
         return try await self.innerStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
                                                  endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
                                                  context: context, engine: engine, inwardTransform: inwardTransform, outwardTransform: outwardTransform)
+    }
+    
+    public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlwareType: MiddlewareProtocol,
+                        Context: AWSMiddlewareContext>(
+        innerMiddleware: InnerMiddlwareType?,
+        input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
+        engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
+    where InnerMiddlwareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlwareType.Output == HttpResponse,
+    InnerMiddlwareType.Context == Context {
+        let outerMiddleware: NoOpMiddleware<OriginalInput, TransformedOutput, Context>? = nil
+        
+        return try await self.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input, endpointOverride: endpointOverride,
+                                      endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
+    }
+    
+    public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol,
+                        OuterMiddlwareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+        outerMiddleware: OuterMiddlwareType?,
+        input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
+        engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
+    where OuterMiddlwareType.Input == OriginalInput, OuterMiddlwareType.Output == TransformedOutput,
+    OuterMiddlwareType.Context == Context {
+        let innerMiddleware: NoOpMiddleware<SmokeSdkHttpRequestBuilder, HttpResponse, Context>? = nil
+        
+        return try await self.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input, endpointOverride: endpointOverride,
+                                      endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
+    }
+    
+    public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>(
+        input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
+        engine: SmokeHTTPClientEngine) async throws -> TransformedOutput {
+        let outerMiddleware: NoOpMiddleware<OriginalInput, TransformedOutput, Context>? = nil
+        let innerMiddleware: NoOpMiddleware<SmokeSdkHttpRequestBuilder, HttpResponse, Context>? = nil
+        
+        return try await self.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input, endpointOverride: endpointOverride,
+                                      endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
     }
 }
