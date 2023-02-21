@@ -55,18 +55,15 @@ public struct AWSHTTPMiddlewareStack<ErrorType: Error & Decodable>: AWSHTTPMiddl
         self.specifyContentHeadersForZeroLengthBody = specifyContentHeadersForZeroLengthBody
     }
     
-    /// Input and Output
-    public func execute<OriginalInput, TransformedOutput, InnerMiddlewareType: MiddlewareProtocol,
-                        OuterMiddlewareType: MiddlewareProtocol, InwardTransformerType: TransformProtocol, OutwardTransformerType: TransformProtocol,
-                        Context: AWSMiddlewareContext>(
+    public func execute<InnerMiddlewareType: MiddlewareProtocol, OuterMiddlewareType: MiddlewareProtocol,
+                InwardTransformerType: TransformProtocol, OutwardTransformerType: TransformProtocol, Context: AWSMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
-        input: OriginalInput, endpointOverride: URL?, endpointPath: String, httpMethod: HttpMethodType, context: Context,
-        engine: SmokeHTTPClientEngine, inwardTransform: InwardTransformerType, outwardTransform: OutwardTransformerType) async throws -> TransformedOutput
-    where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == TransformedOutput,
-    InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
+        input: OuterMiddlewareType.Input, endpointOverride: URL?, endpointPath: String, httpMethod: HttpMethodType, context: Context,
+        engine: SmokeHTTPClientEngine, inwardTransform: InwardTransformerType, outwardTransform: OutwardTransformerType) async throws -> OuterMiddlewareType.Output
+    where InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context,
-    OutwardTransformerType.Input == HttpResponse, OutwardTransformerType.Output == TransformedOutput,
-    InwardTransformerType.Input == OriginalInput, InwardTransformerType.Output == SmokeSdkHttpRequestBuilder,
+    OutwardTransformerType.Input == HttpResponse, OutwardTransformerType.Output == OuterMiddlewareType.Output,
+    InwardTransformerType.Input == OuterMiddlewareType.Input, InwardTransformerType.Output == SmokeSdkHttpRequestBuilder,
     OutwardTransformerType.Context == Context, InwardTransformerType.Context == Context {
         let endpointHostName = endpointOverride?.host ?? self.endpointHostName
         let endpointPort = endpointOverride?.port ?? self.endpointPort
