@@ -253,12 +253,12 @@ public struct AWSHTTPMiddlewareStack<ErrorType: Error & Decodable>: AWSHTTPMiddl
         SDKHTTPHostNameMiddleware<Context>(hostName: endpointHostName)
         SDKHTTPPortMiddleware<Context>(port: Int16(endpointPort))
         
+        SDKHTTPMethodMiddleware<Context>(methodType: httpMethod)
         V4SignerMiddleware<Context>(credentialsProvider: self.credentialsProvider, awsRegion: self.awsRegion,
                                     service: self.service, operation: self.operation, target: self.target,
                                     isV4SignRequest: self.isV4SignRequest, signAllHeaders: self.signAllHeaders)
         SDKContentHeadersMiddleware<Context>(specifyContentHeadersForZeroLengthBody: self.specifyContentHeadersForZeroLengthBody, contentType: self.contentType)
         SDKHeaderMiddleware<Context>.userAgent
         SDKHeaderMiddleware<Context>.accept
-        SDKHTTPMethodMiddleware<Context>(methodType: httpMethod)
     }
 }
