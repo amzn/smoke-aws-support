@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  XMLAWSHTTPTransformerMiddlewareStack.swift
+//  XMLContentTypeMiddlewareTransformStack.swift
 //  AWSMiddleware
 //
 
@@ -23,7 +23,7 @@ import SmokeHTTPClient
 import AWSCore
 import XMLCoding
 
-public protocol XMLAWSHTTPTransformerMiddlewareStackProtocol: AWSHTTPTransformerMiddlewareStackProtocol {
+public protocol XMLContentTypeMiddlewareTransformStackProtocol: ContentTypeMiddlewareTransformStackProtocol {
     init(inputBodyRootKey: String?, outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?,
          outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy?,
          inputQueryMapEncodingStrategy: QueryEncoder.MapEncodingStrategy,
@@ -36,7 +36,7 @@ public protocol XMLAWSHTTPTransformerMiddlewareStackProtocol: AWSHTTPTransformer
          contentType: String, specifyContentHeadersForZeroLengthBody: Bool)
 }
 
-public struct XMLAWSHTTPTransformerMiddlewareStack<ErrorType: Error & Decodable>: XMLAWSHTTPTransformerMiddlewareStackProtocol {
+public struct XMLContentTypeMiddlewareTransformStack<ErrorType: Error & Decodable>: XMLContentTypeMiddlewareTransformStackProtocol {
     public let inputBodyRootKey: String?
     public let outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?
     public let outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy?
@@ -44,7 +44,7 @@ public struct XMLAWSHTTPTransformerMiddlewareStack<ErrorType: Error & Decodable>
     public let inputQueryListEncodingStrategy: QueryEncoder.ListEncodingStrategy
     public let inputQueryKeyEncodingStrategy: QueryEncoder.KeyEncodingStrategy
     public let inputQueryKeyEncodeTransformStrategy: QueryEncoder.KeyEncodeTransformStrategy
-    public let middlewareStack: StandardAWSHTTPMiddlewareStack<ErrorType>
+    public let middlewareStack: StandardMiddlewareTransformStack<ErrorType>
     
     public init(inputBodyRootKey: String?, outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?,
                 outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy?,
@@ -63,7 +63,7 @@ public struct XMLAWSHTTPTransformerMiddlewareStack<ErrorType: Error & Decodable>
         self.inputQueryListEncodingStrategy = inputQueryListEncodingStrategy
         self.inputQueryKeyEncodingStrategy = inputQueryKeyEncodingStrategy
         self.inputQueryKeyEncodeTransformStrategy = inputQueryKeyEncodeTransformStrategy
-        self.middlewareStack = StandardAWSHTTPMiddlewareStack(
+        self.middlewareStack = StandardMiddlewareTransformStack(
             credentialsProvider: credentialsProvider, awsRegion: awsRegion, service: service,
             operation: operation, target: target, isV4SignRequest: isV4SignRequest, signAllHeaders: signAllHeaders,
             endpointHostName: endpointHostName, endpointPort: endpointPort, contentType: contentType,
@@ -78,13 +78,13 @@ public struct XMLAWSHTTPTransformerMiddlewareStack<ErrorType: Error & Decodable>
     where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == TransformedOutput,
     InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context {
-        let inwardTransform = XMLInwardTransformer<OriginalInput, Context>(httpPath: endpointPath, inputBodyRootKey: self.inputBodyRootKey,
-                                                                           inputQueryMapEncodingStrategy: self.inputQueryMapEncodingStrategy,
-                                                                           inputQueryListEncodingStrategy: self.inputQueryListEncodingStrategy,
-                                                                           inputQueryKeyEncodingStrategy: self.inputQueryKeyEncodingStrategy,
-                                                                           inputQueryKeyEncodeTransformStrategy: self.inputQueryKeyEncodeTransformStrategy)
-        let outwardTransform = XMLOutwardTransformer<TransformedOutput, Context>(outputListDecodingStrategy: self.outputListDecodingStrategy,
-                                                                                 outputMapDecodingStrategy: self.outputMapDecodingStrategy)
+        let inwardTransform = XMLInwardTransform<OriginalInput, Context>(httpPath: endpointPath, inputBodyRootKey: self.inputBodyRootKey,
+                                                                         inputQueryMapEncodingStrategy: self.inputQueryMapEncodingStrategy,
+                                                                         inputQueryListEncodingStrategy: self.inputQueryListEncodingStrategy,
+                                                                         inputQueryKeyEncodingStrategy: self.inputQueryKeyEncodingStrategy,
+                                                                         inputQueryKeyEncodeTransformStrategy: self.inputQueryKeyEncodeTransformStrategy)
+        let outwardTransform = XMLOutwardTransform<TransformedOutput, Context>(outputListDecodingStrategy: self.outputListDecodingStrategy,
+                                                                               outputMapDecodingStrategy: self.outputMapDecodingStrategy)
         
         return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
                                                  endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
@@ -101,12 +101,12 @@ public struct XMLAWSHTTPTransformerMiddlewareStack<ErrorType: Error & Decodable>
     where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == Void,
     InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context {
-        let inwardTransform = XMLInwardTransformer<OriginalInput, Context>(httpPath: endpointPath, inputBodyRootKey: self.inputBodyRootKey,
-                                                                           inputQueryMapEncodingStrategy: self.inputQueryMapEncodingStrategy,
-                                                                           inputQueryListEncodingStrategy: self.inputQueryListEncodingStrategy,
-                                                                           inputQueryKeyEncodingStrategy: self.inputQueryKeyEncodingStrategy,
-                                                                           inputQueryKeyEncodeTransformStrategy: self.inputQueryKeyEncodeTransformStrategy)
-        let outwardTransform = VoidOutwardTransformer<Context>()
+        let inwardTransform = XMLInwardTransform<OriginalInput, Context>(httpPath: endpointPath, inputBodyRootKey: self.inputBodyRootKey,
+                                                                         inputQueryMapEncodingStrategy: self.inputQueryMapEncodingStrategy,
+                                                                         inputQueryListEncodingStrategy: self.inputQueryListEncodingStrategy,
+                                                                         inputQueryKeyEncodingStrategy: self.inputQueryKeyEncodingStrategy,
+                                                                         inputQueryKeyEncodeTransformStrategy: self.inputQueryKeyEncodeTransformStrategy)
+        let outwardTransform = VoidOutwardTransform<Context>()
         
         return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
                                                  endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,

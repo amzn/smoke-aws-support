@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  DataOutwardTransformer.swift
+//  XMLOutwardTransform.swift
 //  AWSMiddleware
 //
 
@@ -23,18 +23,31 @@ import SmokeHTTPClient
 import QueryCoding
 import HTTPHeadersCoding
 import HTTPPathCoding
+import XMLCoding
 
-enum DataOutwardTransformerError: Error {
-    case invalidPayloadNotData
-}
-
-public struct DataOutwardTransformer<Output: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>: TransformProtocol {
+public struct XMLOutwardTransform<Output: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>: TransformProtocol {
     public typealias Input = HttpResponse
     
-    public init() {
+    public let outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?
+    public let outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy?
+    
+    public init(outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?,
+                outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy?) {
+        self.outputListDecodingStrategy = outputListDecodingStrategy
+        self.outputMapDecodingStrategy = outputMapDecodingStrategy
     }
     
     public func transform(_ output: HttpResponse, context: Context) async throws -> Output {
+        let decoder = XMLDecoder.awsCompatibleDecoder()
+        
+        if let outputListDecodingStrategy = outputListDecodingStrategy {
+            decoder.listDecodingStrategy = outputListDecodingStrategy
+        }
+        
+        if let outputMapDecodingStrategy = outputMapDecodingStrategy {
+            decoder.mapDecodingStrategy = outputMapDecodingStrategy
+        }
+        
         func bodyDecodableProvider() throws -> Output.BodyType {
             let responseBodyOptional: Data?
             switch output.body {
@@ -45,20 +58,17 @@ public struct DataOutwardTransformer<Output: HTTPResponseOutputProtocol, Context
             case .none:
                 responseBodyOptional = nil
             }
+            
             // we are expecting a response body
             guard let responseBody = responseBodyOptional else {
                 throw HTTPError.badResponse("Unexpected empty response.")
             }
             
             // Convert output to a debug string only if debug logging is enabled
-            context.logger.trace("Attempting to decode result data from JSON to \(Output.self)",
-                                             metadata: ["body": "\(responseBody.debugString)"])
+            context.logger.trace("Attempting to decode result data from XML to \(Output.self)",
+                                 metadata: ["body": "\(responseBody.debugString)"])
             
-            guard let bodyEncodable = responseBody as? Output.BodyType else {
-                throw DataOutwardTransformerError.invalidPayloadNotData
-            }
-            
-            return bodyEncodable
+            return try decoder.decode(Output.BodyType.self, from: responseBody)
         }
         
         let mappedHeaders: [(String, String?)] = output.headers.headers.flatMap { header in

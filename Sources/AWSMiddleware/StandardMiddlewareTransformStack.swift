@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  StandardAWSHTTPMiddlewareStack.swift
+//  StandardMiddlewareTransformStack.swift
 //  AWSMiddleware
 //
 
@@ -22,7 +22,7 @@ import QueryCoding
 import SmokeHTTPClient
 import AWSCore
 
-public struct StandardAWSHTTPMiddlewareStack<ErrorType: Error & Decodable> {
+public struct StandardMiddlewareTransformStack<ErrorType: Error & Decodable> {
     public let credentialsProvider: CredentialsProvider
     public let awsRegion: AWSRegion
     public let service: String
@@ -56,15 +56,15 @@ public struct StandardAWSHTTPMiddlewareStack<ErrorType: Error & Decodable> {
     }
     
     public func execute<InnerMiddlewareType: MiddlewareProtocol, OuterMiddlewareType: MiddlewareProtocol,
-                InwardTransformerType: TransformProtocol, OutwardTransformerType: TransformProtocol, Context: AWSMiddlewareContext>(
+                InwardTransformType: TransformProtocol, OutwardTransformType: TransformProtocol, Context: AWSMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
         input: OuterMiddlewareType.Input, endpointOverride: URL?, endpointPath: String, httpMethod: HttpMethodType, context: Context,
-        engine: SmokeHTTPClientEngine, inwardTransform: InwardTransformerType, outwardTransform: OutwardTransformerType) async throws -> OuterMiddlewareType.Output
+        engine: SmokeHTTPClientEngine, inwardTransform: InwardTransformType, outwardTransform: OutwardTransformType) async throws -> OuterMiddlewareType.Output
     where InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context,
-    OutwardTransformerType.Input == HttpResponse, OutwardTransformerType.Output == OuterMiddlewareType.Output,
-    InwardTransformerType.Input == OuterMiddlewareType.Input, InwardTransformerType.Output == SmokeSdkHttpRequestBuilder,
-    OutwardTransformerType.Context == Context, InwardTransformerType.Context == Context {
+    OutwardTransformType.Input == HttpResponse, OutwardTransformType.Output == OuterMiddlewareType.Output,
+    InwardTransformType.Input == OuterMiddlewareType.Input, InwardTransformType.Output == SmokeSdkHttpRequestBuilder,
+    OutwardTransformType.Context == Context, InwardTransformType.Context == Context {
         let endpointHostName = endpointOverride?.host ?? self.endpointHostName
         let endpointPort = endpointOverride?.port ?? self.endpointPort
         

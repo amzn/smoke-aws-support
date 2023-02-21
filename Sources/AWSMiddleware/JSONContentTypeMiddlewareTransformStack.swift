@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  DataAWSHTTPTransformerMiddlewareStack.swift
+//  JSONContentTypeMiddlewareTransformStack.swift
 //  AWSMiddleware
 //
 
@@ -22,30 +22,28 @@ import QueryCoding
 import SmokeHTTPClient
 import AWSCore
 
-public protocol DataAWSHTTPTransformerMiddlewareStackProtocol: AWSHTTPTransformerMiddlewareStackProtocol {
+public protocol JSONContentTypeMiddlewareTransformStackProtocol: ContentTypeMiddlewareTransformStackProtocol {
     init(inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?,
          credentialsProvider: CredentialsProvider, awsRegion: AWSRegion, service: String, operation: String?,
          target: String?, isV4SignRequest: Bool, signAllHeaders: Bool, endpointHostName: String, endpointPort: Int,
          contentType: String, specifyContentHeadersForZeroLengthBody: Bool)
 }
 
-public struct DataAWSHTTPTransformerMiddlewareStack<ErrorType: Error & Decodable>: DataAWSHTTPTransformerMiddlewareStackProtocol {
+public struct JSONContentTypeMiddlewareTransformStack<ErrorType: Error & Decodable>: JSONContentTypeMiddlewareTransformStackProtocol {
     public let inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?
-    public let middlewareStack: StandardAWSHTTPMiddlewareStack<ErrorType>
+    public let middlewareStack: StandardMiddlewareTransformStack<ErrorType>
     
     public init(inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?,
                 credentialsProvider: CredentialsProvider, awsRegion: AWSRegion, service: String, operation: String?,
                 target: String?, isV4SignRequest: Bool, signAllHeaders: Bool, endpointHostName: String, endpointPort: Int,
                 contentType: String, specifyContentHeadersForZeroLengthBody: Bool) {
         self.inputQueryMapDecodingStrategy = inputQueryMapDecodingStrategy
-        self.middlewareStack = StandardAWSHTTPMiddlewareStack(
+        self.middlewareStack = StandardMiddlewareTransformStack(
             credentialsProvider: credentialsProvider, awsRegion: awsRegion, service: service,
             operation: operation, target: target, isV4SignRequest: isV4SignRequest, signAllHeaders: signAllHeaders,
             endpointHostName: endpointHostName, endpointPort: endpointPort, contentType: contentType,
             specifyContentHeadersForZeroLengthBody: specifyContentHeadersForZeroLengthBody)
     }
-    
-    //-- Input and Output
     
     public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
                         OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
@@ -55,9 +53,9 @@ public struct DataAWSHTTPTransformerMiddlewareStack<ErrorType: Error & Decodable
     where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == TransformedOutput,
     InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context {
-        let inwardTransform = DataInwardTransformer<OriginalInput, Context>(httpPath: endpointPath,
-                                                                            inputQueryMapDecodingStrategy: self.inputQueryMapDecodingStrategy)
-        let outwardTransform = DataOutwardTransformer<TransformedOutput, Context>()
+        let inwardTransform = JSONInwardTransform<OriginalInput, Context>(httpPath: endpointPath,
+                                                                          inputQueryMapDecodingStrategy: self.inputQueryMapDecodingStrategy)
+        let outwardTransform = JSONOutwardTransform<TransformedOutput, Context>()
         
         return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
                                                  endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
@@ -74,9 +72,9 @@ public struct DataAWSHTTPTransformerMiddlewareStack<ErrorType: Error & Decodable
     where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == Void,
     InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context {
-        let inwardTransform = DataInwardTransformer<OriginalInput, Context>(httpPath: endpointPath,
-                                                                            inputQueryMapDecodingStrategy: self.inputQueryMapDecodingStrategy)
-        let outwardTransform = VoidOutwardTransformer<Context>()
+        let inwardTransform = JSONInwardTransform<OriginalInput, Context>(httpPath: endpointPath,
+                                                                          inputQueryMapDecodingStrategy: self.inputQueryMapDecodingStrategy)
+        let outwardTransform = VoidOutwardTransform<Context>()
         
         return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
                                                  endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
