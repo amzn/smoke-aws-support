@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  FormEncodedHTTPMiddlewareStack.swift
+//  FormEncodedAWSHTTPTransformerMiddlewareStack.swift
 //  AWSMiddleware
 //
 
@@ -23,7 +23,20 @@ import SmokeHTTPClient
 import AWSCore
 import XMLCoding
 
-public struct FormEncodedHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareStackProtocol> {
+public protocol FormEncodedAWSHTTPTransformerMiddlewareStackProtocol: AWSHTTPTransformerMiddlewareStackProtocol {
+    init(inputBodyRootKey: String?, outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?,
+         outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy?,
+         inputQueryMapEncodingStrategy: QueryEncoder.MapEncodingStrategy,
+         inputQueryListEncodingStrategy: QueryEncoder.ListEncodingStrategy,
+         inputQueryKeyEncodingStrategy: QueryEncoder.KeyEncodingStrategy,
+         inputQueryKeyEncodeTransformStrategy: QueryEncoder.KeyEncodeTransformStrategy,
+         credentialsProvider: CredentialsProvider,
+         awsRegion: AWSRegion, service: String, operation: String?,
+         target: String?, isV4SignRequest: Bool, signAllHeaders: Bool, endpointHostName: String, endpointPort: Int,
+         contentType: String, specifyContentHeadersForZeroLengthBody: Bool)
+}
+
+public struct FormEncodedAWSHTTPTransformerMiddlewareStack<ErrorType: Error & Decodable>: FormEncodedAWSHTTPTransformerMiddlewareStackProtocol {
     public let inputBodyRootKey: String?
     public let outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?
     public let outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy?
@@ -31,8 +44,7 @@ public struct FormEncodedHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareSt
     public let inputQueryListEncodingStrategy: QueryEncoder.ListEncodingStrategy
     public let inputQueryKeyEncodingStrategy: QueryEncoder.KeyEncodingStrategy
     public let inputQueryKeyEncodeTransformStrategy: QueryEncoder.KeyEncodeTransformStrategy
-    public let specifyContentHeadersForZeroLengthBody: Bool
-    public let innerStack: InnerStackType
+    public let middlewareStack: StandardAWSHTTPMiddlewareStack<ErrorType>
     
     public init(inputBodyRootKey: String?, outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?,
                 outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy?,
@@ -40,7 +52,10 @@ public struct FormEncodedHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareSt
                 inputQueryListEncodingStrategy: QueryEncoder.ListEncodingStrategy,
                 inputQueryKeyEncodingStrategy: QueryEncoder.KeyEncodingStrategy,
                 inputQueryKeyEncodeTransformStrategy: QueryEncoder.KeyEncodeTransformStrategy,
-                specifyContentHeadersForZeroLengthBody: Bool, innerStack: InnerStackType) {
+                credentialsProvider: CredentialsProvider,
+                awsRegion: AWSRegion, service: String, operation: String?,
+                target: String?, isV4SignRequest: Bool, signAllHeaders: Bool, endpointHostName: String, endpointPort: Int,
+                contentType: String, specifyContentHeadersForZeroLengthBody: Bool) {
         self.inputBodyRootKey = inputBodyRootKey
         self.outputListDecodingStrategy = outputListDecodingStrategy
         self.outputMapDecodingStrategy = outputMapDecodingStrategy
@@ -48,8 +63,11 @@ public struct FormEncodedHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareSt
         self.inputQueryListEncodingStrategy = inputQueryListEncodingStrategy
         self.inputQueryKeyEncodingStrategy = inputQueryKeyEncodingStrategy
         self.inputQueryKeyEncodeTransformStrategy = inputQueryKeyEncodeTransformStrategy
-        self.specifyContentHeadersForZeroLengthBody = specifyContentHeadersForZeroLengthBody
-        self.innerStack = innerStack
+        self.middlewareStack = StandardAWSHTTPMiddlewareStack(
+            credentialsProvider: credentialsProvider, awsRegion: awsRegion, service: service,
+            operation: operation, target: target, isV4SignRequest: isV4SignRequest, signAllHeaders: signAllHeaders,
+            endpointHostName: endpointHostName, endpointPort: endpointPort, contentType: contentType,
+            specifyContentHeadersForZeroLengthBody: specifyContentHeadersForZeroLengthBody)
     }
     
     public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
@@ -68,45 +86,9 @@ public struct FormEncodedHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareSt
         let outwardTransform = XMLOutwardTransformer<TransformedOutput, Context>(outputListDecodingStrategy: self.outputListDecodingStrategy,
                                                                                  outputMapDecodingStrategy: self.outputMapDecodingStrategy)
         
-        return try await self.innerStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
+        return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
                                                  endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
                                                  context: context, engine: engine, inwardTransform: inwardTransform, outwardTransform: outwardTransform)
-    }
-    
-    public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                        Context: AWSMiddlewareContext>(
-        innerMiddleware: InnerMiddlewareType?,
-        input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
-        engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
-    where InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
-    InnerMiddlewareType.Context == Context {
-        let outerMiddleware: NoOpMiddleware<OriginalInput, TransformedOutput, Context>? = nil
-        
-        return try await self.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input, endpointOverride: endpointOverride,
-                                      endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
-    }
-    
-    public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol,
-                        OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
-        outerMiddleware: OuterMiddlewareType?,
-        input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
-        engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
-    where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == TransformedOutput,
-    OuterMiddlewareType.Context == Context {
-        let innerMiddleware: NoOpMiddleware<SmokeSdkHttpRequestBuilder, HttpResponse, Context>? = nil
-        
-        return try await self.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input, endpointOverride: endpointOverride,
-                                      endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
-    }
-    
-    public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>(
-        input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
-        engine: SmokeHTTPClientEngine) async throws -> TransformedOutput {
-        let outerMiddleware: NoOpMiddleware<OriginalInput, TransformedOutput, Context>? = nil
-        let innerMiddleware: NoOpMiddleware<SmokeSdkHttpRequestBuilder, HttpResponse, Context>? = nil
-        
-        return try await self.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input, endpointOverride: endpointOverride,
-                                      endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
     }
     
     //-- Input Only
@@ -126,44 +108,8 @@ public struct FormEncodedHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareSt
                                                                                    inputQueryKeyEncodeTransformStrategy: self.inputQueryKeyEncodeTransformStrategy)
         let outwardTransform = VoidOutwardTransformer<Context>()
         
-        return try await self.innerStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
+        return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
                                                  endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
                                                  context: context, engine: engine, inwardTransform: inwardTransform, outwardTransform: outwardTransform)
-    }
-    
-    public func execute<OriginalInput: HTTPRequestInputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                        Context: AWSMiddlewareContext>(
-        innerMiddleware: InnerMiddlewareType?,
-        input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
-        engine: SmokeHTTPClientEngine) async throws
-    where InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
-    InnerMiddlewareType.Context == Context {
-        let outerMiddleware: NoOpMiddleware<OriginalInput, Void, Context>? = nil
-        
-        return try await self.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input, endpointOverride: endpointOverride,
-                                      endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
-    }
-    
-    public func execute<OriginalInput: HTTPRequestInputProtocol,
-                        OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
-        outerMiddleware: OuterMiddlewareType?,
-        input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
-        engine: SmokeHTTPClientEngine) async throws
-    where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == Void,
-    OuterMiddlewareType.Context == Context {
-        let innerMiddleware: NoOpMiddleware<SmokeSdkHttpRequestBuilder, HttpResponse, Context>? = nil
-        
-        return try await self.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input, endpointOverride: endpointOverride,
-                                      endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
-    }
-    
-    public func execute<OriginalInput: HTTPRequestInputProtocol, Context: AWSMiddlewareContext>(
-        input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
-        engine: SmokeHTTPClientEngine) async throws {
-        let outerMiddleware: NoOpMiddleware<OriginalInput, Void, Context>? = nil
-        let innerMiddleware: NoOpMiddleware<SmokeSdkHttpRequestBuilder, HttpResponse, Context>? = nil
-        
-        return try await self.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input, endpointOverride: endpointOverride,
-                                      endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
     }
 }

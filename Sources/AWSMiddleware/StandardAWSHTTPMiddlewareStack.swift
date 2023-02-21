@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  AWSHTTPMiddlewareStack.swift
+//  StandardAWSHTTPMiddlewareStack.swift
 //  AWSMiddleware
 //
 
@@ -22,7 +22,7 @@ import QueryCoding
 import SmokeHTTPClient
 import AWSCore
 
-public struct AWSHTTPMiddlewareStack<ErrorType: Error & Decodable>: AWSHTTPMiddlewareStackProtocol {
+public struct StandardAWSHTTPMiddlewareStack<ErrorType: Error & Decodable> {
     public let credentialsProvider: CredentialsProvider
     public let awsRegion: AWSRegion
     public let service: String

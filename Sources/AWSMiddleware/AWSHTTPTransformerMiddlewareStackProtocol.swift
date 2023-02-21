@@ -11,47 +11,62 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  DataHTTPMiddlewareStack.swift
+//  AWSHTTPTransformerMiddlewareStackProtocol.swift
 //  AWSMiddleware
 //
 
-import SwiftMiddleware
-import SmokeHTTPMiddleware
-import ClientRuntime
-import QueryCoding
-import SmokeHTTPClient
-import AWSCore
+ import SwiftMiddleware
+ import SmokeHTTPMiddleware
+ import ClientRuntime
+ import QueryCoding
+ import SmokeHTTPClient
+ import AWSCore
+ 
+ public protocol AWSHTTPTransformerMiddlewareStackProtocol {
+     //-- Input and Output
+     func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
+                  OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+         outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
+         input: OriginalInput, endpointOverride: URL?, endpointPath: String, httpMethod: HttpMethodType, context: Context,
+         engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
+     where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == TransformedOutput,
+     InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
+     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context
+     
+     //-- Input Only
+     func execute<OriginalInput: HTTPRequestInputProtocol, InnerMiddlewareType: MiddlewareProtocol,
+                  OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+         outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
+         input: OriginalInput, endpointOverride: URL?, endpointPath: String, httpMethod: HttpMethodType, context: Context,
+         engine: SmokeHTTPClientEngine) async throws
+     where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == Void,
+     InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
+     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context
+ }
 
-public struct DataHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareStackProtocol> {
-    public let inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?
-    public let innerStack: InnerStackType
-    
-    public init(inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?, innerStack: InnerStackType) {
-        self.inputQueryMapDecodingStrategy = inputQueryMapDecodingStrategy
-        self.innerStack = innerStack
+public struct NoOpMiddleware<Input, Output, Context>: MiddlewareProtocol {
+    public func handle(_ input: Input, context: Context, next: (Input, Context) async throws -> Output) async throws -> Output {
+        return try await next(input, context)
     }
-    
+}
+
+public extension AWSHTTPTransformerMiddlewareStackProtocol {
     //-- Input and Output
     
-    public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                        OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+    func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
+                 OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
-        input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
+        input: OriginalInput, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
     where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == TransformedOutput,
     InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context {
-        let inwardTransform = DataInwardTransformer<OriginalInput, Context>(httpPath: endpointPath,
-                                                                            inputQueryMapDecodingStrategy: self.inputQueryMapDecodingStrategy)
-        let outwardTransform = DataOutwardTransformer<TransformedOutput, Context>()
-        
-        return try await self.innerStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
-                                                 endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
-                                                 context: context, engine: engine, inwardTransform: inwardTransform, outwardTransform: outwardTransform)
+        return try await self.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input, endpointOverride: nil,
+                                      endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
     }
     
-    public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                        Context: AWSMiddlewareContext>(
+    func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
+                 Context: AWSMiddlewareContext>(
         innerMiddleware: InnerMiddlewareType?,
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
@@ -63,8 +78,8 @@ public struct DataHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareStackProt
                                       endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
     }
     
-    public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol,
-                        OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+    func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol,
+                 OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?,
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
@@ -76,7 +91,7 @@ public struct DataHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareStackProt
                                       endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
     }
     
-    public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>(
+    func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>(
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws -> TransformedOutput {
         let outerMiddleware: NoOpMiddleware<OriginalInput, TransformedOutput, Context>? = nil
@@ -88,25 +103,20 @@ public struct DataHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareStackProt
     
     //-- Input Only
     
-    public func execute<OriginalInput: HTTPRequestInputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                        OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+    func execute<OriginalInput: HTTPRequestInputProtocol, InnerMiddlewareType: MiddlewareProtocol,
+                 OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
-        input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
+        input: OriginalInput, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws
     where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == Void,
     InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context {
-        let inwardTransform = DataInwardTransformer<OriginalInput, Context>(httpPath: endpointPath,
-                                                                            inputQueryMapDecodingStrategy: self.inputQueryMapDecodingStrategy)
-        let outwardTransform = VoidOutwardTransformer<Context>()
-        
-        return try await self.innerStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
-                                                 endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
-                                                 context: context, engine: engine, inwardTransform: inwardTransform, outwardTransform: outwardTransform)
+        return try await self.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input, endpointOverride: nil,
+                                      endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
     }
     
-    public func execute<OriginalInput: HTTPRequestInputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                        Context: AWSMiddlewareContext>(
+    func execute<OriginalInput: HTTPRequestInputProtocol, InnerMiddlewareType: MiddlewareProtocol,
+                 Context: AWSMiddlewareContext>(
         innerMiddleware: InnerMiddlewareType?,
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws
@@ -118,8 +128,8 @@ public struct DataHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareStackProt
                                       endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
     }
     
-    public func execute<OriginalInput: HTTPRequestInputProtocol,
-                        OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+    func execute<OriginalInput: HTTPRequestInputProtocol,
+                 OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?,
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws
@@ -131,7 +141,7 @@ public struct DataHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareStackProt
                                       endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
     }
     
-    public func execute<OriginalInput: HTTPRequestInputProtocol, Context: AWSMiddlewareContext>(
+    func execute<OriginalInput: HTTPRequestInputProtocol, Context: AWSMiddlewareContext>(
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws {
         let outerMiddleware: NoOpMiddleware<OriginalInput, Void, Context>? = nil
@@ -141,3 +151,4 @@ public struct DataHTTPMiddlewareStack<InnerStackType: AWSHTTPMiddlewareStackProt
                                       endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
     }
 }
+ 
