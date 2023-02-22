@@ -40,6 +40,14 @@ public protocol SmokeAWSOperationReporting {
     var latencyTimer: Metrics.Timer? { get }
 }
 
+public extension SmokeAWSOperationReporting {
+    func toStandardHTTPClientInvocationMetrics() -> StandardHTTPClientInvocationMetrics {
+        return .init(successCounter: self.successCounter, failure5XXCounter: self.failure5XXCounter,
+                     failure4XXCounter: self.failure4XXCounter, retryCountRecorder: self.retryCountRecorder,
+                     latencyTimer: self.latencyTimer)
+    }
+}
+
 public struct StandardSmokeAWSOperationReporting<OperationIdentifer: Hashable & CustomStringConvertible>: SmokeAWSOperationReporting {
     public let successCounter: Metrics.Counter?
     public let failure5XXCounter: Metrics.Counter?
