@@ -34,10 +34,10 @@ public struct DataResponseTransform<Output: HTTPResponseOutputProtocol, Context:
     public init() {
     }
     
-    public func transform(_ output: HttpResponse, context: Context) async throws -> Output {
+    public func transform(_ response: HttpResponse, context: Context) async throws -> Output {
         func bodyDecodableProvider() throws -> Output.BodyType {
             let responseBodyOptional: Data?
-            switch output.body {
+            switch response.body {
             case .data(let data):
                 responseBodyOptional = data
             case .stream(let reader):
@@ -61,7 +61,7 @@ public struct DataResponseTransform<Output: HTTPResponseOutputProtocol, Context:
             return bodyEncodable
         }
         
-        let mappedHeaders: [(String, String?)] = output.headers.headers.flatMap { header in
+        let mappedHeaders: [(String, String?)] = response.headers.headers.flatMap { header in
             return header.value.map { value in
                 return (header.name, value)
             }

@@ -42,6 +42,7 @@ public struct XMLPayloadTransformStack<ErrorType: Error & Decodable>: XMLPayload
     public let inputQueryKeyEncodingStrategy: QueryEncoder.KeyEncodingStrategy
     public let inputQueryKeyEncodeTransformStrategy: QueryEncoder.KeyEncodeTransformStrategy
     public let middlewareStack: StandardMiddlewareTransformStack<ErrorType>
+    public let errorTypeHTTPHeader: String?
     
     public init(inputBodyRootKey: String?, outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?,
                 outputMapDecodingStrategy: XMLCoding.XMLDecoder.MapDecodingStrategy?,
@@ -58,6 +59,7 @@ public struct XMLPayloadTransformStack<ErrorType: Error & Decodable>: XMLPayload
         self.inputQueryKeyEncodingStrategy = inputQueryKeyEncodingStrategy
         self.inputQueryKeyEncodeTransformStrategy = inputQueryKeyEncodeTransformStrategy
         self.middlewareStack = StandardMiddlewareTransformStack(initContext: initContext)
+        self.errorTypeHTTPHeader = initContext.errorTypeHTTPHeader
     }
     
     public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
@@ -76,7 +78,10 @@ public struct XMLPayloadTransformStack<ErrorType: Error & Decodable>: XMLPayload
         let responseTransform = XMLResponseTransform<TransformedOutput, Context>(outputListDecodingStrategy: self.outputListDecodingStrategy,
                                                                                  outputMapDecodingStrategy: self.outputMapDecodingStrategy)
         
-        return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
+        let errorResponseTransform = JSONErrorResponseTransform<ErrorType, Context>(errorTypeHTTPHeader: self.errorTypeHTTPHeader)
+        
+        return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware,
+                                                      errorResponseTransform: errorResponseTransform, input: input,
                                                       endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
                                                       context: context, engine: engine, requestTransform: requestTransform, responseTransform: responseTransform)
     }
@@ -98,7 +103,10 @@ public struct XMLPayloadTransformStack<ErrorType: Error & Decodable>: XMLPayload
                                                                            inputQueryKeyEncodeTransformStrategy: self.inputQueryKeyEncodeTransformStrategy)
         let responseTransform = VoidResponseTransform<Context>()
         
-        return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
+        let errorResponseTransform = JSONErrorResponseTransform<ErrorType, Context>(errorTypeHTTPHeader: self.errorTypeHTTPHeader)
+        
+        return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware,
+                                                      errorResponseTransform: errorResponseTransform, input: input,
                                                       endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
                                                       context: context, engine: engine, requestTransform: requestTransform, responseTransform: responseTransform)
     }

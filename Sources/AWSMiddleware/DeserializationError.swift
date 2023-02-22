@@ -11,28 +11,12 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  VoidResponseTransform.swift
-//  AWSMiddleware
+//  DeserializationError.swift
+//  SmokeHTTPMiddleware
 //
 
-import AWSCore
-import SwiftMiddleware
-import SmokeHTTPMiddleware
-import ClientRuntime
-import SmokeHTTPClient
-import QueryCoding
-import HTTPHeadersCoding
-import HTTPPathCoding
-import XMLCoding
-
-public struct VoidResponseTransform<Context: SmokeMiddlewareContext>: TransformProtocol {
-    public typealias Input = HttpResponse
-    
-    public init() {
-        
-    }
-    
-    public func transform(_ response: HttpResponse, context: Context) async throws -> Void {
-        return
-    }
+public enum DeserializationError: Swift.Error {
+    case noBody
+    case noErrors
+    case notExpectedType
 }

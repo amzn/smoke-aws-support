@@ -44,13 +44,14 @@ public struct StandardMiddlewareInitializationContext {
     /// The content type of the payload being sent.
     public var contentType: String
     public var specifyContentHeadersForZeroLengthBody: Bool
+    public var errorTypeHTTPHeader: String?
     
     public init(credentialsProvider: CredentialsProvider, awsRegion: AWSRegion, service: String, operation: String? = nil,
                 target: String? = nil, isV4SignRequest: Bool = true, specifyContentHeadersForZeroLengthBody: Bool = true,
                 signAllHeaders: Bool = false, retryer: SDKRetryer, retryConfiguration: HTTPClientRetryConfiguration,
                 metrics: StandardHTTPClientInvocationMetrics = .init(), outwardsRequestAggregatorV2: OutwardsRequestAggregatorV2? = nil,
                 outwardsRequestAggregator: OutwardsRequestAggregator? = nil, endpointHostName: String, endpointPort: Int,
-                contentType: String) {
+                contentType: String, errorTypeHTTPHeader: String? = nil) {
         self.credentialsProvider = credentialsProvider
         self.awsRegion = awsRegion
         self.service = service
@@ -67,6 +68,7 @@ public struct StandardMiddlewareInitializationContext {
         self.endpointPort = endpointPort
         self.contentType = contentType
         self.specifyContentHeadersForZeroLengthBody = specifyContentHeadersForZeroLengthBody
+        self.errorTypeHTTPHeader = errorTypeHTTPHeader
     }
 }
 
@@ -77,16 +79,17 @@ public struct StandardMiddlewareTransformStack<ErrorType: Error & Decodable> {
         self.initContext = initContext
     }
     
-    public func execute<InnerMiddlewareType: MiddlewareProtocol, OuterMiddlewareType: MiddlewareProtocol,
+    public func execute<InnerMiddlewareType: MiddlewareProtocol, OuterMiddlewareType: MiddlewareProtocol, ErrorResponseTransformType: TransformProtocol,
                 RequestTransformType: TransformProtocol, ResponseTransformType: TransformProtocol, Context: SmokeMiddlewareContext>(
-        outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
+                    outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?, errorResponseTransform: ErrorResponseTransformType,
         input: OuterMiddlewareType.Input, endpointOverride: URL?, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine, requestTransform: RequestTransformType, responseTransform: ResponseTransformType) async throws -> OuterMiddlewareType.Output
     where InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context,
     ResponseTransformType.Input == HttpResponse, ResponseTransformType.Output == OuterMiddlewareType.Output,
     RequestTransformType.Input == OuterMiddlewareType.Input, RequestTransformType.Output == SmokeSdkHttpRequestBuilder,
-    ResponseTransformType.Context == Context, RequestTransformType.Context == Context {
+    ResponseTransformType.Context == Context, RequestTransformType.Context == Context, ErrorResponseTransformType.Context == Context,
+    ErrorResponseTransformType.Input == HttpResponse, ErrorResponseTransformType.Output == ErrorType {
         let endpointHostName = endpointOverride?.host ?? self.initContext.endpointHostName
         let endpointPort = endpointOverride?.port ?? self.initContext.endpointPort
         
@@ -114,7 +117,7 @@ public struct StandardMiddlewareTransformStack<ErrorType: Error & Decodable> {
                                                      metrics: self.initContext.metrics,
                                                      outwardsRequestAggregatorV2: self.initContext.outwardsRequestAggregatorV2,
                                                      outwardsRequestAggregator: self.initContext.outwardsRequestAggregator)
-            SDKErrorMiddleware<Context, ErrorType>()
+            SDKErrorMiddleware(errorResponseTransform: errorResponseTransform)
         }
         
         let next: ((SmokeSdkHttpRequestBuilder, Context) async throws -> HttpResponse) = engine.getExecuteFunction()

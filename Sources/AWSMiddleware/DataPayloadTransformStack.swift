@@ -30,11 +30,13 @@ public protocol DataPayloadTransformStackProtocol: PayloadTransformStackProtocol
 public struct DataPayloadTransformStack<ErrorType: Error & Decodable>: DataPayloadTransformStackProtocol {
     public let inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?
     public let middlewareStack: StandardMiddlewareTransformStack<ErrorType>
+    public let errorTypeHTTPHeader: String?
     
     public init(inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?,
                 initContext: StandardMiddlewareInitializationContext) {
         self.inputQueryMapDecodingStrategy = inputQueryMapDecodingStrategy
         self.middlewareStack = StandardMiddlewareTransformStack(initContext: initContext)
+        self.errorTypeHTTPHeader = initContext.errorTypeHTTPHeader
     }
     
     //-- Input and Output
@@ -51,7 +53,10 @@ public struct DataPayloadTransformStack<ErrorType: Error & Decodable>: DataPaylo
                                                                             inputQueryMapDecodingStrategy: self.inputQueryMapDecodingStrategy)
         let responseTransform = DataResponseTransform<TransformedOutput, Context>()
         
-        return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
+        let errorResponseTransform = JSONErrorResponseTransform<ErrorType, Context>(errorTypeHTTPHeader: self.errorTypeHTTPHeader)
+        
+        return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware,
+                                                      errorResponseTransform: errorResponseTransform, input: input,
                                                       endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
                                                       context: context, engine: engine, requestTransform: requestTransform, responseTransform: responseTransform)
     }
@@ -70,7 +75,10 @@ public struct DataPayloadTransformStack<ErrorType: Error & Decodable>: DataPaylo
                                                                             inputQueryMapDecodingStrategy: self.inputQueryMapDecodingStrategy)
         let responseTransform = VoidResponseTransform<Context>()
         
-        return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
+        let errorResponseTransform = JSONErrorResponseTransform<ErrorType, Context>(errorTypeHTTPHeader: self.errorTypeHTTPHeader)
+        
+        return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware,
+                                                      errorResponseTransform: errorResponseTransform, input: input,
                                                       endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
                                                       context: context, engine: engine, requestTransform: requestTransform, responseTransform: responseTransform)
     }

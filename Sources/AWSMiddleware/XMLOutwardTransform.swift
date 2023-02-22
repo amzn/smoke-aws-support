@@ -37,7 +37,7 @@ public struct XMLResponseTransform<Output: HTTPResponseOutputProtocol, Context: 
         self.outputMapDecodingStrategy = outputMapDecodingStrategy
     }
     
-    public func transform(_ output: HttpResponse, context: Context) async throws -> Output {
+    public func transform(_ response: HttpResponse, context: Context) async throws -> Output {
         let decoder = XMLDecoder.awsCompatibleDecoder()
         
         if let outputListDecodingStrategy = outputListDecodingStrategy {
@@ -50,7 +50,7 @@ public struct XMLResponseTransform<Output: HTTPResponseOutputProtocol, Context: 
         
         func bodyDecodableProvider() throws -> Output.BodyType {
             let responseBodyOptional: Data?
-            switch output.body {
+            switch response.body {
             case .data(let data):
                 responseBodyOptional = data
             case .stream(let reader):
@@ -71,7 +71,7 @@ public struct XMLResponseTransform<Output: HTTPResponseOutputProtocol, Context: 
             return try decoder.decode(Output.BodyType.self, from: responseBody)
         }
         
-        let mappedHeaders: [(String, String?)] = output.headers.headers.flatMap { header in
+        let mappedHeaders: [(String, String?)] = response.headers.headers.flatMap { header in
             return header.value.map { value in
                 return (header.name, value)
             }

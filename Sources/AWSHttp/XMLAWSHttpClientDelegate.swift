@@ -37,7 +37,7 @@ extension CharacterSet {
                                                                "s", "t", "u", "v", "w", "x", "y", "z"]
 }
 
-struct ErrorWrapper<ErrorType: Error & Decodable>: Error & Decodable {
+public struct ErrorWrapper<ErrorType: Error & Decodable>: Error & Decodable {
     let errors: [ErrorType]
     
     enum CodingKeys: String, CodingKey {
@@ -46,7 +46,7 @@ struct ErrorWrapper<ErrorType: Error & Decodable>: Error & Decodable {
         case errorLowercase = "error"
     }
     
-    internal static func errorFromBodyData<ErrorType: Error & Decodable>(errorType: ErrorType.Type,
+    public static func errorFromBodyData<ErrorType: Error & Decodable>(errorType: ErrorType.Type,
                                                                          bodyData: Data) throws -> Error {
         // attempt to decode the output body from an XML payload
         let result: Error
@@ -65,6 +65,26 @@ struct ErrorWrapper<ErrorType: Error & Decodable>: Error & Decodable {
             } else {
                 result = errorWrapper
             }
+        }
+        
+        return result
+    }
+    
+    public static func firstErrorFromBodyData<ErrorType: Error & Decodable>(errorType: ErrorType.Type,
+                                                                            bodyData: Data) throws -> ErrorType? {
+        // attempt to decode the output body from an XML payload
+        let result: ErrorType?
+        
+        // the error is not wrapped
+        do {
+            result = try XMLDecoder.awsCompatibleDecoder().decode(ErrorType.self,
+                                                                            from: bodyData)
+        } catch is DecodingError {
+            // if the error is wrapped
+            let errorWrapper = try XMLDecoder.awsCompatibleDecoder().decode(ErrorWrapper<ErrorType>.self,
+                                                         from: bodyData)
+            
+            result = errorWrapper.errors.first
         }
         
         return result
@@ -99,7 +119,7 @@ struct ErrorWrapper<ErrorType: Error & Decodable>: Error & Decodable {
         }
     }
     
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         
         // The error list may be under slightly different keys, so check all the places
