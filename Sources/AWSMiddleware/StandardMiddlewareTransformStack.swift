@@ -56,19 +56,19 @@ public struct StandardMiddlewareTransformStack<ErrorType: Error & Decodable> {
     }
     
     public func execute<InnerMiddlewareType: MiddlewareProtocol, OuterMiddlewareType: MiddlewareProtocol,
-                InwardTransformType: TransformProtocol, OutwardTransformType: TransformProtocol, Context: AWSMiddlewareContext>(
+                RequestTransformType: TransformProtocol, ResponseTransformType: TransformProtocol, Context: AWSMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
         input: OuterMiddlewareType.Input, endpointOverride: URL?, endpointPath: String, httpMethod: HttpMethodType, context: Context,
-        engine: SmokeHTTPClientEngine, inwardTransform: InwardTransformType, outwardTransform: OutwardTransformType) async throws -> OuterMiddlewareType.Output
+        engine: SmokeHTTPClientEngine, requestTransform: RequestTransformType, responseTransform: ResponseTransformType) async throws -> OuterMiddlewareType.Output
     where InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context,
-    OutwardTransformType.Input == HttpResponse, OutwardTransformType.Output == OuterMiddlewareType.Output,
-    InwardTransformType.Input == OuterMiddlewareType.Input, InwardTransformType.Output == SmokeSdkHttpRequestBuilder,
-    OutwardTransformType.Context == Context, InwardTransformType.Context == Context {
+    ResponseTransformType.Input == HttpResponse, ResponseTransformType.Output == OuterMiddlewareType.Output,
+    RequestTransformType.Input == OuterMiddlewareType.Input, RequestTransformType.Output == SmokeSdkHttpRequestBuilder,
+    ResponseTransformType.Context == Context, RequestTransformType.Context == Context {
         let endpointHostName = endpointOverride?.host ?? self.endpointHostName
         let endpointPort = endpointOverride?.port ?? self.endpointPort
         
-        let stack = MiddlewareTransformStack(inwardTransform: inwardTransform, outwardTransform: outwardTransform) {
+        let stack = MiddlewareTransformStack(requestTransform: requestTransform, responseTransform: responseTransform) {
             if let outerMiddleware = outerMiddleware {
                 outerMiddleware
             }
@@ -87,6 +87,7 @@ public struct StandardMiddlewareTransformStack<ErrorType: Error & Decodable> {
             SDKContentHeadersMiddleware<Context>(specifyContentHeadersForZeroLengthBody: self.specifyContentHeadersForZeroLengthBody, contentType: self.contentType)
             SDKHeaderMiddleware<Context>.userAgent
             SDKHeaderMiddleware<Context>.accept
+            SDKCRTErrorMiddleware<Context, ErrorType>()
         }
         
         let next: ((SmokeSdkHttpRequestBuilder, Context) async throws -> HttpResponse) = engine.getExecuteFunction()

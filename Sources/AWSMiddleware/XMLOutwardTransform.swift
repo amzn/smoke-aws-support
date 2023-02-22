@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  XMLOutwardTransform.swift
+//  XMLResponseTransform.swift
 //  AWSMiddleware
 //
 
@@ -25,7 +25,7 @@ import HTTPHeadersCoding
 import HTTPPathCoding
 import XMLCoding
 
-public struct XMLOutwardTransform<Output: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>: TransformProtocol {
+public struct XMLResponseTransform<Output: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>: TransformProtocol {
     public typealias Input = HttpResponse
     
     public let outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?

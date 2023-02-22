@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  FormEncodedInwardTransform.swift
+//  FormEncodedRequestTransform.swift
 //  AWSMiddleware
 //
 
@@ -25,7 +25,7 @@ import HTTPHeadersCoding
 import HTTPPathCoding
 import XMLCoding
 
-public struct FormEncodedInwardTransform<Input: HTTPRequestInputProtocol, Context>: TransformProtocol {
+public struct FormEncodedRequestTransform<Input: HTTPRequestInputProtocol, Context>: TransformProtocol {
     public typealias Output = SmokeSdkHttpRequestBuilder
     
     public let httpPath: String

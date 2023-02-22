@@ -33,7 +33,7 @@
         "repositoryURL": "https://github.com/amzn/smoke-http.git",
         "state": {
           "branch": "smoke_http_middleware",
-          "revision": "20dd4334bfd84ff372b3cf7749d3f908921787de",
+          "revision": "cef67ce461b94064ca3fc0d1927de304c68809b6",
           "version": null
         }
       },
@@ -87,7 +87,7 @@
         "repositoryURL": "https://github.com/tachyonics/swift-middleware",
         "state": {
           "branch": "static_poc_2",
-          "revision": "f582c2d4463cb0114093590d0ecb6d79f16e00d4",
+          "revision": "750c4889c2a189a97f02f2d81406a6e9ad608eb7",
           "version": null
         }
       },

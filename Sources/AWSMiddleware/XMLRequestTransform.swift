@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  JSONInwardTransform.swift
+//  XMLRequestTransform.swift
 //  AWSMiddleware
 //
 
@@ -23,16 +23,27 @@ import SmokeHTTPClient
 import QueryCoding
 import HTTPHeadersCoding
 import HTTPPathCoding
+import XMLCoding
 
-public struct JSONInwardTransform<Input: HTTPRequestInputProtocol, Context>: TransformProtocol {
+public struct XMLRequestTransform<Input: HTTPRequestInputProtocol, Context>: TransformProtocol {
     public typealias Output = SmokeSdkHttpRequestBuilder
     
     public let httpPath: String
-    public let inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?
+    public let inputBodyRootKey: String?
+    public let inputQueryMapEncodingStrategy: QueryEncoder.MapEncodingStrategy
+    public let inputQueryListEncodingStrategy: QueryEncoder.ListEncodingStrategy
+    public let inputQueryKeyEncodingStrategy: QueryEncoder.KeyEncodingStrategy
+    public let inputQueryKeyEncodeTransformStrategy: QueryEncoder.KeyEncodeTransformStrategy
     
-    public init(httpPath: String, inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?) {
+    public init(httpPath: String, inputBodyRootKey: String?, inputQueryMapEncodingStrategy: QueryEncoder.MapEncodingStrategy,
+                inputQueryListEncodingStrategy: QueryEncoder.ListEncodingStrategy, inputQueryKeyEncodingStrategy: QueryEncoder.KeyEncodingStrategy,
+                inputQueryKeyEncodeTransformStrategy: QueryEncoder.KeyEncodeTransformStrategy) {
         self.httpPath = httpPath
-        self.inputQueryMapDecodingStrategy = inputQueryMapDecodingStrategy
+        self.inputBodyRootKey = inputBodyRootKey
+        self.inputQueryMapEncodingStrategy = inputQueryMapEncodingStrategy
+        self.inputQueryListEncodingStrategy = inputQueryListEncodingStrategy
+        self.inputQueryKeyEncodingStrategy = inputQueryKeyEncodingStrategy
+        self.inputQueryKeyEncodeTransformStrategy = inputQueryKeyEncodeTransformStrategy
     }
     
     public func transform(_ input: Input, context: Context) async throws -> SmokeSdkHttpRequestBuilder {
@@ -60,22 +71,29 @@ public struct JSONInwardTransform<Input: HTTPRequestInputProtocol, Context>: Tra
                 additionalHeaders.add(name: entry.0, value: value)
             }
         }
-        
+
         let bodyData: Data
         if let bodyEncodable = input.bodyEncodable {
-            bodyData = try JSONEncoder.awsCompatibleEncoder().encode(bodyEncodable)
+            let encoder = XMLEncoder.awsCompatibleEncoder()
+            encoder.listEncodingStrategy = .expandListWithItemTag("item")
+            
+            guard let inputBodyRootKey = inputBodyRootKey else {
+                throw SmokeAWSError.invalidRequest("Unable to encode input body without root key.")
+            }
+            
+            bodyData = try encoder.encode(bodyEncodable, withRootKey: inputBodyRootKey)
         } else {
             bodyData = Data()
         }
-        
+
         let queryItems: [URLQueryItem]
         if let queryEncodable = input.queryEncodable {
-            let queryEncoder: QueryEncoder
-            if let inputQueryMapDecodingStrategy = inputQueryMapDecodingStrategy {
-                queryEncoder = QueryEncoder(mapEncodingStrategy: inputQueryMapDecodingStrategy)
-            } else {
-                queryEncoder = QueryEncoder()
-            }
+            let queryEncoder = QueryEncoder(
+                keyEncodingStrategy: self.inputQueryKeyEncodingStrategy,
+                mapEncodingStrategy: self.inputQueryMapEncodingStrategy,
+                listEncodingStrategy: self.inputQueryListEncodingStrategy,
+                keyEncodeTransformStrategy: self.inputQueryKeyEncodeTransformStrategy)
+
             queryItems = try queryEncoder.encodeToArray(queryEncodable,
                                                               allowedCharacterSet: .uriAWSQueryValueAllowed)
         } else {

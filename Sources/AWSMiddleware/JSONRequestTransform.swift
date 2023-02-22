@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  DataInwardTransform.swift
+//  JSONRequestTransform.swift
 //  AWSMiddleware
 //
 
@@ -24,7 +24,7 @@ import QueryCoding
 import HTTPHeadersCoding
 import HTTPPathCoding
 
-public struct DataInwardTransform<Input: HTTPRequestInputProtocol, Context>: TransformProtocol {
+public struct JSONRequestTransform<Input: HTTPRequestInputProtocol, Context>: TransformProtocol {
     public typealias Output = SmokeSdkHttpRequestBuilder
     
     public let httpPath: String

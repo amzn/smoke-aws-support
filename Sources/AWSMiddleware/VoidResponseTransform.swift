@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  VoidOutwardTransform.swift
+//  VoidResponseTransform.swift
 //  AWSMiddleware
 //
 
@@ -25,7 +25,7 @@ import HTTPHeadersCoding
 import HTTPPathCoding
 import XMLCoding
 
-public struct VoidOutwardTransform<Context: AWSMiddlewareContext>: TransformProtocol {
+public struct VoidResponseTransform<Context: AWSMiddlewareContext>: TransformProtocol {
     public typealias Input = HttpResponse
     
     public init() {

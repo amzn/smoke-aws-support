@@ -55,13 +55,13 @@ public struct DataPayloadTransformStack<ErrorType: Error & Decodable>: DataPaylo
     where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == TransformedOutput,
     InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context {
-        let inwardTransform = DataInwardTransform<OriginalInput, Context>(httpPath: endpointPath,
-                                                                          inputQueryMapDecodingStrategy: self.inputQueryMapDecodingStrategy)
-        let outwardTransform = DataOutwardTransform<TransformedOutput, Context>()
+        let requestTransform = DataRequestTransform<OriginalInput, Context>(httpPath: endpointPath,
+                                                                            inputQueryMapDecodingStrategy: self.inputQueryMapDecodingStrategy)
+        let responseTransform = DataResponseTransform<TransformedOutput, Context>()
         
         return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
-                                                 endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
-                                                 context: context, engine: engine, inwardTransform: inwardTransform, outwardTransform: outwardTransform)
+                                                      endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
+                                                      context: context, engine: engine, requestTransform: requestTransform, responseTransform: responseTransform)
     }
     
     //-- Input Only
@@ -74,12 +74,12 @@ public struct DataPayloadTransformStack<ErrorType: Error & Decodable>: DataPaylo
     where OuterMiddlewareType.Input == OriginalInput, OuterMiddlewareType.Output == Void,
     InnerMiddlewareType.Input == SmokeSdkHttpRequestBuilder, InnerMiddlewareType.Output == HttpResponse,
     InnerMiddlewareType.Context == Context, OuterMiddlewareType.Context == Context {
-        let inwardTransform = DataInwardTransform<OriginalInput, Context>(httpPath: endpointPath,
-                                                                          inputQueryMapDecodingStrategy: self.inputQueryMapDecodingStrategy)
-        let outwardTransform = VoidOutwardTransform<Context>()
+        let requestTransform = DataRequestTransform<OriginalInput, Context>(httpPath: endpointPath,
+                                                                            inputQueryMapDecodingStrategy: self.inputQueryMapDecodingStrategy)
+        let responseTransform = VoidResponseTransform<Context>()
         
         return try await self.middlewareStack.execute(outerMiddleware: outerMiddleware, innerMiddleware: innerMiddleware, input: input,
-                                                 endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
-                                                 context: context, engine: engine, inwardTransform: inwardTransform, outwardTransform: outwardTransform)
+                                                      endpointOverride: endpointOverride, endpointPath: endpointPath, httpMethod: httpMethod,
+                                                      context: context, engine: engine, requestTransform: requestTransform, responseTransform: responseTransform)
     }
 }

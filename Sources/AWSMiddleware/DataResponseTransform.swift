@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  DataOutwardTransform.swift
+//  DataResponseTransform.swift
 //  AWSMiddleware
 //
 
@@ -24,11 +24,11 @@ import QueryCoding
 import HTTPHeadersCoding
 import HTTPPathCoding
 
-enum DataOutwardTransformError: Error {
+enum DataResponseTransformError: Error {
     case invalidPayloadNotData
 }
 
-public struct DataOutwardTransform<Output: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>: TransformProtocol {
+public struct DataResponseTransform<Output: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>: TransformProtocol {
     public typealias Input = HttpResponse
     
     public init() {
@@ -55,7 +55,7 @@ public struct DataOutwardTransform<Output: HTTPResponseOutputProtocol, Context: 
                                              metadata: ["body": "\(responseBody.debugString)"])
             
             guard let bodyEncodable = responseBody as? Output.BodyType else {
-                throw DataOutwardTransformError.invalidPayloadNotData
+                throw DataResponseTransformError.invalidPayloadNotData
             }
             
             return bodyEncodable

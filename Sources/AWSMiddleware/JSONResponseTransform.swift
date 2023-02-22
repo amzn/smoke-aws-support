@@ -11,7 +11,7 @@
 // express or implied. See the License for the specific language governing
 // permissions and limitations under the License.
 //
-//  JSONOutwardTransform.swift
+//  JSONResponseTransform.swift
 //  AWSMiddleware
 //
 
@@ -24,7 +24,7 @@ import QueryCoding
 import HTTPHeadersCoding
 import HTTPPathCoding
 
-public struct JSONOutwardTransform<Output: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>: TransformProtocol {
+public struct JSONResponseTransform<Output: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>: TransformProtocol {
     public typealias Input = HttpResponse
     
     public init() {
