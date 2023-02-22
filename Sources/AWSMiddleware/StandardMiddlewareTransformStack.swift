@@ -23,27 +23,27 @@ import SmokeHTTPClient
 import AWSCore
 
 public struct StandardMiddlewareInitializationContext {
-    public let credentialsProvider: CredentialsProvider
-    public let awsRegion: AWSRegion
-    public let service: String
-    public let operation: String?
-    public let target: String?
-    public let isV4SignRequest: Bool
-    public let signAllHeaders: Bool
-    public let retryer: SDKRetryer
-    public let retryConfiguration: HTTPClientRetryConfiguration
-    public let metrics: StandardHTTPClientInvocationMetrics
-    public let outwardsRequestAggregatorV2: OutwardsRequestAggregatorV2?
+    public var credentialsProvider: CredentialsProvider
+    public var awsRegion: AWSRegion
+    public var service: String
+    public var operation: String?
+    public var target: String?
+    public var isV4SignRequest: Bool
+    public var signAllHeaders: Bool
+    public var retryer: SDKRetryer
+    public var retryConfiguration: HTTPClientRetryConfiguration
+    public var metrics: StandardHTTPClientInvocationMetrics
+    public var outwardsRequestAggregatorV2: OutwardsRequestAggregatorV2?
     // legacy aggregator; only the boxed/existential will be available
-    public let outwardsRequestAggregator: OutwardsRequestAggregator?
+    public var outwardsRequestAggregator: OutwardsRequestAggregator?
 
     /// The server hostname to contact for requests from this client.
-    public let endpointHostName: String
+    public var endpointHostName: String
     /// The server port to connect to.
-    public let endpointPort: Int
+    public var endpointPort: Int
     /// The content type of the payload being sent.
-    public let contentType: String
-    public let specifyContentHeadersForZeroLengthBody: Bool
+    public var contentType: String
+    public var specifyContentHeadersForZeroLengthBody: Bool
     
     public init(credentialsProvider: CredentialsProvider, awsRegion: AWSRegion, service: String, operation: String? = nil,
                 target: String? = nil, isV4SignRequest: Bool = true, specifyContentHeadersForZeroLengthBody: Bool = true,
