@@ -25,7 +25,7 @@ import HTTPHeadersCoding
 import HTTPPathCoding
 import XMLCoding
 
-public struct XMLResponseTransform<Output: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>: TransformProtocol {
+public struct XMLResponseTransform<Output: HTTPResponseOutputProtocol, Context: SmokeMiddlewareContext>: TransformProtocol {
     public typealias Input = HttpResponse
     
     public let outputListDecodingStrategy: XMLCoding.XMLDecoder.ListDecodingStrategy?

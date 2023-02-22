@@ -25,7 +25,7 @@ import HTTPHeadersCoding
 import HTTPPathCoding
 import XMLCoding
 
-public struct VoidResponseTransform<Context: AWSMiddlewareContext>: TransformProtocol {
+public struct VoidResponseTransform<Context: SmokeMiddlewareContext>: TransformProtocol {
     public typealias Input = HttpResponse
     
     public init() {

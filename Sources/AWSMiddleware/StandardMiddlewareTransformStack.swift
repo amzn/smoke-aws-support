@@ -22,7 +22,7 @@ import QueryCoding
 import SmokeHTTPClient
 import AWSCore
 
-public struct StandardMiddlewareTransformStack<ErrorType: Error & Decodable> {
+public struct StandardMiddlewareInitializationContext {
     public let credentialsProvider: CredentialsProvider
     public let awsRegion: AWSRegion
     public let service: String
@@ -30,6 +30,12 @@ public struct StandardMiddlewareTransformStack<ErrorType: Error & Decodable> {
     public let target: String?
     public let isV4SignRequest: Bool
     public let signAllHeaders: Bool
+    public let retryer: SDKRetryer
+    public let retryConfiguration: HTTPClientRetryConfiguration
+    public let metrics: StandardHTTPClientInvocationMetrics
+    public let outwardsRequestAggregatorV2: OutwardsRequestAggregatorV2?
+    // legacy aggregator; only the boxed/existential will be available
+    public let outwardsRequestAggregator: OutwardsRequestAggregator?
 
     /// The server hostname to contact for requests from this client.
     public let endpointHostName: String
@@ -39,9 +45,12 @@ public struct StandardMiddlewareTransformStack<ErrorType: Error & Decodable> {
     public let contentType: String
     public let specifyContentHeadersForZeroLengthBody: Bool
     
-    public init(credentialsProvider: CredentialsProvider, awsRegion: AWSRegion, service: String, operation: String?,
-                target: String?, isV4SignRequest: Bool, signAllHeaders: Bool, endpointHostName: String, endpointPort: Int,
-                contentType: String, specifyContentHeadersForZeroLengthBody: Bool) {
+    public init(credentialsProvider: CredentialsProvider, awsRegion: AWSRegion, service: String, operation: String? = nil,
+                target: String? = nil, isV4SignRequest: Bool = true, specifyContentHeadersForZeroLengthBody: Bool = true,
+                signAllHeaders: Bool = false, retryer: SDKRetryer, retryConfiguration: HTTPClientRetryConfiguration,
+                metrics: StandardHTTPClientInvocationMetrics = .init(), outwardsRequestAggregatorV2: OutwardsRequestAggregatorV2? = nil,
+                outwardsRequestAggregator: OutwardsRequestAggregator? = nil, endpointHostName: String, endpointPort: Int,
+                contentType: String) {
         self.credentialsProvider = credentialsProvider
         self.awsRegion = awsRegion
         self.service = service
@@ -49,14 +58,27 @@ public struct StandardMiddlewareTransformStack<ErrorType: Error & Decodable> {
         self.target = target
         self.isV4SignRequest = isV4SignRequest
         self.signAllHeaders = signAllHeaders
+        self.retryer = retryer
+        self.retryConfiguration = retryConfiguration
+        self.metrics = metrics
+        self.outwardsRequestAggregatorV2 = outwardsRequestAggregatorV2
+        self.outwardsRequestAggregator = outwardsRequestAggregator
         self.endpointHostName = endpointHostName
         self.endpointPort = endpointPort
         self.contentType = contentType
         self.specifyContentHeadersForZeroLengthBody = specifyContentHeadersForZeroLengthBody
     }
+}
+
+public struct StandardMiddlewareTransformStack<ErrorType: Error & Decodable> {
+    public let initContext: StandardMiddlewareInitializationContext
+    
+    public init(initContext: StandardMiddlewareInitializationContext) {
+        self.initContext = initContext
+    }
     
     public func execute<InnerMiddlewareType: MiddlewareProtocol, OuterMiddlewareType: MiddlewareProtocol,
-                RequestTransformType: TransformProtocol, ResponseTransformType: TransformProtocol, Context: AWSMiddlewareContext>(
+                RequestTransformType: TransformProtocol, ResponseTransformType: TransformProtocol, Context: SmokeMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
         input: OuterMiddlewareType.Input, endpointOverride: URL?, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine, requestTransform: RequestTransformType, responseTransform: ResponseTransformType) async throws -> OuterMiddlewareType.Output
@@ -65,8 +87,8 @@ public struct StandardMiddlewareTransformStack<ErrorType: Error & Decodable> {
     ResponseTransformType.Input == HttpResponse, ResponseTransformType.Output == OuterMiddlewareType.Output,
     RequestTransformType.Input == OuterMiddlewareType.Input, RequestTransformType.Output == SmokeSdkHttpRequestBuilder,
     ResponseTransformType.Context == Context, RequestTransformType.Context == Context {
-        let endpointHostName = endpointOverride?.host ?? self.endpointHostName
-        let endpointPort = endpointOverride?.port ?? self.endpointPort
+        let endpointHostName = endpointOverride?.host ?? self.initContext.endpointHostName
+        let endpointPort = endpointOverride?.port ?? self.initContext.endpointPort
         
         let stack = MiddlewareTransformStack(requestTransform: requestTransform, responseTransform: responseTransform) {
             if let outerMiddleware = outerMiddleware {
@@ -81,13 +103,18 @@ public struct StandardMiddlewareTransformStack<ErrorType: Error & Decodable> {
             SDKHTTPPortMiddleware<Context>(port: Int16(endpointPort))
             
             SDKHTTPMethodMiddleware<Context>(methodType: httpMethod)
-            V4SignerMiddleware<Context>(credentialsProvider: self.credentialsProvider, awsRegion: self.awsRegion,
-                                        service: self.service, operation: self.operation, target: self.target,
-                                        isV4SignRequest: self.isV4SignRequest, signAllHeaders: self.signAllHeaders)
-            SDKContentHeadersMiddleware<Context>(specifyContentHeadersForZeroLengthBody: self.specifyContentHeadersForZeroLengthBody, contentType: self.contentType)
+            V4SignerMiddleware<Context>(credentialsProvider: self.initContext.credentialsProvider, awsRegion: self.initContext.awsRegion,
+                                        service: self.initContext.service, operation: self.initContext.operation, target: self.initContext.target,
+                                        isV4SignRequest: self.initContext.isV4SignRequest, signAllHeaders: self.initContext.signAllHeaders)
+            SDKContentHeadersMiddleware<Context>(specifyContentHeadersForZeroLengthBody: self.initContext.specifyContentHeadersForZeroLengthBody,
+                                                 contentType: self.initContext.contentType)
             SDKHeaderMiddleware<Context>.userAgent
             SDKHeaderMiddleware<Context>.accept
-            SDKCRTErrorMiddleware<Context, ErrorType>()
+            SDKRetryerMiddleware<Context, ErrorType>(retryer: self.initContext.retryer, retryConfiguration: self.initContext.retryConfiguration,
+                                                     metrics: self.initContext.metrics,
+                                                     outwardsRequestAggregatorV2: self.initContext.outwardsRequestAggregatorV2,
+                                                     outwardsRequestAggregator: self.initContext.outwardsRequestAggregator)
+            SDKErrorMiddleware<Context, ErrorType>()
         }
         
         let next: ((SmokeSdkHttpRequestBuilder, Context) async throws -> HttpResponse) = engine.getExecuteFunction()

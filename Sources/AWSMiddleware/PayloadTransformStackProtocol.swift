@@ -25,7 +25,7 @@
  public protocol PayloadTransformStackProtocol {
      //-- Input and Output
      func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                  OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+                  OuterMiddlewareType: MiddlewareProtocol, Context: SmokeMiddlewareContext>(
          outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
          input: OriginalInput, endpointOverride: URL?, endpointPath: String, httpMethod: HttpMethodType, context: Context,
          engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
@@ -35,7 +35,7 @@
      
      //-- Input Only
      func execute<OriginalInput: HTTPRequestInputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                  OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+                  OuterMiddlewareType: MiddlewareProtocol, Context: SmokeMiddlewareContext>(
          outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
          input: OriginalInput, endpointOverride: URL?, endpointPath: String, httpMethod: HttpMethodType, context: Context,
          engine: SmokeHTTPClientEngine) async throws
@@ -54,7 +54,7 @@ public extension PayloadTransformStackProtocol {
     //-- Input and Output
     
     func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                 OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+                 OuterMiddlewareType: MiddlewareProtocol, Context: SmokeMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
         input: OriginalInput, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
@@ -66,7 +66,7 @@ public extension PayloadTransformStackProtocol {
     }
     
     func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                 Context: AWSMiddlewareContext>(
+                 Context: SmokeMiddlewareContext>(
         innerMiddleware: InnerMiddlewareType?,
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
@@ -79,7 +79,7 @@ public extension PayloadTransformStackProtocol {
     }
     
     func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol,
-                 OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+                 OuterMiddlewareType: MiddlewareProtocol, Context: SmokeMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?,
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
@@ -91,7 +91,7 @@ public extension PayloadTransformStackProtocol {
                                       endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
     }
     
-    func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>(
+    func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, Context: SmokeMiddlewareContext>(
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws -> TransformedOutput {
         let outerMiddleware: NoOpMiddleware<OriginalInput, TransformedOutput, Context>? = nil
@@ -104,7 +104,7 @@ public extension PayloadTransformStackProtocol {
     //-- Input Only
     
     func execute<OriginalInput: HTTPRequestInputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                 OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+                 OuterMiddlewareType: MiddlewareProtocol, Context: SmokeMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
         input: OriginalInput, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws
@@ -116,7 +116,7 @@ public extension PayloadTransformStackProtocol {
     }
     
     func execute<OriginalInput: HTTPRequestInputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                 Context: AWSMiddlewareContext>(
+                 Context: SmokeMiddlewareContext>(
         innerMiddleware: InnerMiddlewareType?,
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws
@@ -129,7 +129,7 @@ public extension PayloadTransformStackProtocol {
     }
     
     func execute<OriginalInput: HTTPRequestInputProtocol,
-                 OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+                 OuterMiddlewareType: MiddlewareProtocol, Context: SmokeMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?,
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws
@@ -141,7 +141,7 @@ public extension PayloadTransformStackProtocol {
                                       endpointPath: endpointPath, httpMethod: httpMethod, context: context, engine: engine)
     }
     
-    func execute<OriginalInput: HTTPRequestInputProtocol, Context: AWSMiddlewareContext>(
+    func execute<OriginalInput: HTTPRequestInputProtocol, Context: SmokeMiddlewareContext>(
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws {
         let outerMiddleware: NoOpMiddleware<OriginalInput, Void, Context>? = nil

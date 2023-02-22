@@ -28,7 +28,7 @@ enum DataResponseTransformError: Error {
     case invalidPayloadNotData
 }
 
-public struct DataResponseTransform<Output: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>: TransformProtocol {
+public struct DataResponseTransform<Output: HTTPResponseOutputProtocol, Context: SmokeMiddlewareContext>: TransformProtocol {
     public typealias Input = HttpResponse
     
     public init() {

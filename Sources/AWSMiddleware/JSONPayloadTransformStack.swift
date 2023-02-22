@@ -24,9 +24,7 @@ import AWSCore
 
 public protocol JSONPayloadTransformStackProtocol: PayloadTransformStackProtocol {
     init(inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?,
-         credentialsProvider: CredentialsProvider, awsRegion: AWSRegion, service: String, operation: String?,
-         target: String?, isV4SignRequest: Bool, signAllHeaders: Bool, endpointHostName: String, endpointPort: Int,
-         contentType: String, specifyContentHeadersForZeroLengthBody: Bool)
+         initContext: StandardMiddlewareInitializationContext)
 }
 
 public struct JSONPayloadTransformStack<ErrorType: Error & Decodable>: JSONPayloadTransformStackProtocol {
@@ -34,19 +32,13 @@ public struct JSONPayloadTransformStack<ErrorType: Error & Decodable>: JSONPaylo
     public let middlewareStack: StandardMiddlewareTransformStack<ErrorType>
     
     public init(inputQueryMapDecodingStrategy: QueryEncoder.MapEncodingStrategy?,
-                credentialsProvider: CredentialsProvider, awsRegion: AWSRegion, service: String, operation: String?,
-                target: String?, isV4SignRequest: Bool, signAllHeaders: Bool, endpointHostName: String, endpointPort: Int,
-                contentType: String, specifyContentHeadersForZeroLengthBody: Bool) {
+                initContext: StandardMiddlewareInitializationContext) {
         self.inputQueryMapDecodingStrategy = inputQueryMapDecodingStrategy
-        self.middlewareStack = StandardMiddlewareTransformStack(
-            credentialsProvider: credentialsProvider, awsRegion: awsRegion, service: service,
-            operation: operation, target: target, isV4SignRequest: isV4SignRequest, signAllHeaders: signAllHeaders,
-            endpointHostName: endpointHostName, endpointPort: endpointPort, contentType: contentType,
-            specifyContentHeadersForZeroLengthBody: specifyContentHeadersForZeroLengthBody)
+        self.middlewareStack = StandardMiddlewareTransformStack(initContext: initContext)
     }
     
     public func execute<OriginalInput: HTTPRequestInputProtocol, TransformedOutput: HTTPResponseOutputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                        OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+                        OuterMiddlewareType: MiddlewareProtocol, Context: SmokeMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws -> TransformedOutput
@@ -65,7 +57,7 @@ public struct JSONPayloadTransformStack<ErrorType: Error & Decodable>: JSONPaylo
     //-- Input Only
     
     public func execute<OriginalInput: HTTPRequestInputProtocol, InnerMiddlewareType: MiddlewareProtocol,
-                        OuterMiddlewareType: MiddlewareProtocol, Context: AWSMiddlewareContext>(
+                        OuterMiddlewareType: MiddlewareProtocol, Context: SmokeMiddlewareContext>(
         outerMiddleware: OuterMiddlewareType?, innerMiddleware: InnerMiddlewareType?,
         input: OriginalInput, endpointOverride: URL? = nil, endpointPath: String, httpMethod: HttpMethodType, context: Context,
         engine: SmokeHTTPClientEngine) async throws

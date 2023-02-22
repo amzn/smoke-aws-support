@@ -27,7 +27,7 @@ enum V4SignerMiddlewareError: Swift.Error {
     case invalidBody
 }
 
-public struct V4SignerMiddleware<Context: AWSMiddlewareContext>: MiddlewareProtocol {
+public struct V4SignerMiddleware<Context: SmokeMiddlewareContext>: MiddlewareProtocol {
     public typealias Input = SmokeSdkHttpRequestBuilder
     public typealias Output = HttpResponse
     

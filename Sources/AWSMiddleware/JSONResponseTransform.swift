@@ -24,7 +24,7 @@ import QueryCoding
 import HTTPHeadersCoding
 import HTTPPathCoding
 
-public struct JSONResponseTransform<Output: HTTPResponseOutputProtocol, Context: AWSMiddlewareContext>: TransformProtocol {
+public struct JSONResponseTransform<Output: HTTPResponseOutputProtocol, Context: SmokeMiddlewareContext>: TransformProtocol {
     public typealias Input = HttpResponse
     
     public init() {
