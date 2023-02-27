@@ -52,6 +52,9 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     public var logLevel: Logger.Level
     
     private let jsonEncoder: JSONEncoder
+    private let serializationQueue = DispatchQueue(
+                label: "com.amazon.SmokeAwsSupport.CloudwatchJsonStandardErrorLoggerV2.serializationQueue",
+                target: DispatchQueue.global())
     
     private let entryStream: AsyncStream<String>
     private let stream: TextOutputStream
@@ -177,7 +180,7 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
         
         // pass to the global dispatch queue for serialization
         // schedule at a low priority to avoid disrupting request handling
-        DispatchQueue.global().async(qos: .utility) {
+        self.serializationQueue.async(qos: .utility) {
             let logEntry = LogEntry(stringFields: codableMetadata, integerFields: codableMetadataInts)
             if let jsonData = try? self.jsonEncoder.encode(logEntry),
                let jsonMessage = String(data: jsonData, encoding: .utf8) {
