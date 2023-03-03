@@ -50,6 +50,7 @@ public extension AWSClientProtocol {
             return try await httpClient.executeRetriableWithoutOutput(
                 endpointPath: endpointPath,
                 httpMethod: httpMethod,
+                operation: operation,
                 input: requestInput,
                 invocationContext: invocationContext,
                 retryConfiguration: retryConfiguration,
@@ -85,6 +86,7 @@ public extension AWSClientProtocol {
             return try await httpClient.executeRetriableWithOutput(
                 endpointPath: endpointPath,
                 httpMethod: httpMethod,
+                operation: operation,
                 input: requestInput,
                 invocationContext: invocationContext,
                 retryConfiguration: retryConfiguration,
