@@ -43,6 +43,7 @@ public extension AWSClientProtocol {
         return httpClient.executeAsEventLoopFutureRetriableWithoutOutput(
             endpointPath: endpointPath,
             httpMethod: httpMethod,
+            operation: operation,
             input: requestInput,
             invocationContext: invocationContext,
             retryConfiguration: retryConfiguration,
@@ -76,6 +77,7 @@ public extension AWSClientProtocol {
         return httpClient.executeAsEventLoopFutureRetriableWithOutput(
             endpointPath: endpointPath,
             httpMethod: httpMethod,
+            operation: operation,
             input: requestInput,
             invocationContext: invocationContext,
             retryConfiguration: retryConfiguration,
