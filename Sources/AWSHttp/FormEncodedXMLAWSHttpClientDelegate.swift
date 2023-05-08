@@ -25,6 +25,7 @@ import QueryCoding
 import HTTPHeadersCoding
 import HTTPPathCoding
 import AsyncHTTPClient
+import ShapeCoding
 
 /**
  Struct conforming to the AWSHttpClientDelegate protocol that encodes request query items into the body and

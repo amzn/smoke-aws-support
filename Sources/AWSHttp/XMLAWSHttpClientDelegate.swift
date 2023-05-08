@@ -26,6 +26,7 @@ import QueryCoding
 import HTTPHeadersCoding
 import HTTPPathCoding
 import AsyncHTTPClient
+import ShapeCoding
 
 extension CharacterSet {
     public static let uriAWSQueryValueAllowed: CharacterSet = ["~", "-", ".", "0", "1", "2", "3", "4",
