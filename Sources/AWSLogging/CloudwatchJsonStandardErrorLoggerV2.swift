@@ -145,7 +145,7 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     }
     
     public func log(level: Logger.Level, message: Logger.Message,
-                    metadata: Logger.Metadata?, file: String, function: String, line: UInt) {
+                    metadata explicit: Logger.Metadata?, file: String, function: String, line: UInt) {
         let shortFileName: String
         if let range = file.range(of: "Sources/") {
             let startIndex = file.index(range.lowerBound, offsetBy: sourcesSubString.count)
@@ -157,11 +157,11 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
         var metadataToUse: Logger.Metadata = self.metadata
                 
         if let provided = self.metadataProvider?.get() {
-            metadataToUse = metadataToUse.merging(provided) { (global, local) in local }
+            metadataToUse.merge(provided) { _, provided in provided }
         }
         
-        if let metadata = metadata {
-            metadataToUse = metadataToUse.merging(metadata) { (global, local) in local }
+        if let explicit = explicit {
+            metadataToUse.merge(explicit) { _, explicit in explicit }
         }
         
         var codableMetadata: [String: String] = [:]
