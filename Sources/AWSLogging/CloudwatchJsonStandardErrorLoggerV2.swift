@@ -49,6 +49,7 @@ public enum MetadataType {
  */
 public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     public var metadata: Logger.Metadata
+    public var metadataProvider: Logger.MetadataProvider?
     public var logLevel: Logger.Level
     
     private let jsonEncoder: JSONEncoder
@@ -63,10 +64,12 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
     private let metadataTypes: [String: MetadataType]
     
     private init(minimumLogLevel: Logger.Level,
-                 metadataTypes: [String: MetadataType]) {
+                 metadataTypes: [String: MetadataType],
+                 metadataProvider: Logger.MetadataProvider? = nil) {
         self.logLevel = minimumLogLevel
         self.metadata = [:]
         self.metadataTypes = metadataTypes
+        self.metadataProvider = metadataProvider
         
         let theJsonEncoder = JSONEncoder()
         theJsonEncoder.outputFormatting = [.sortedKeys]
@@ -125,18 +128,24 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
      Set the logger implementation of the LoggerAPI to this type.
      */
     public static func enableLogging(minimumLogLevel: Logger.Level = .info,
-                                     metadataTypes: [String: MetadataType] = [:]) -> CloudwatchJsonStandardErrorLoggerV2 {
+                                     metadataTypes: [String: MetadataType] = [:],
+                                     metadataProvider: Logger.MetadataProvider? = nil) -> CloudwatchJsonStandardErrorLoggerV2 {
         let logger = CloudwatchJsonStandardErrorLoggerV2(minimumLogLevel: minimumLogLevel, metadataTypes: metadataTypes)
         
-        LoggingSystem.bootstrap { label in
-            return logger
+        func factory(label: String, newMetadataProvider: Logger.MetadataProvider?) -> LogHandler {
+            var logHander = logger
+            logHander.metadataProvider = newMetadataProvider
+            
+            return logHander
         }
+        
+        LoggingSystem.bootstrap(factory, metadataProvider: metadataProvider)
         
         return logger
     }
     
     public func log(level: Logger.Level, message: Logger.Message,
-                    metadata: Logger.Metadata?, file: String, function: String, line: UInt) {
+                    metadata explicit: Logger.Metadata?, file: String, function: String, line: UInt) {
         let shortFileName: String
         if let range = file.range(of: "Sources/") {
             let startIndex = file.index(range.lowerBound, offsetBy: sourcesSubString.count)
@@ -145,11 +154,14 @@ public struct CloudwatchJsonStandardErrorLoggerV2: LogHandler {
             shortFileName = file
         }
         
-        let metadataToUse: Logger.Metadata
-        if let metadata = metadata {
-            metadataToUse = self.metadata.merging(metadata) { (global, local) in local }
-        } else {
-            metadataToUse = self.metadata
+        var metadataToUse: Logger.Metadata = self.metadata
+                
+        if let provided = self.metadataProvider?.get() {
+            metadataToUse.merge(provided) { _, provided in provided }
+        }
+        
+        if let explicit = explicit {
+            metadataToUse.merge(explicit) { _, explicit in explicit }
         }
         
         var codableMetadata: [String: String] = [:]
