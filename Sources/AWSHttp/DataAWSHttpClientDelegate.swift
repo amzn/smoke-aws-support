@@ -128,7 +128,8 @@ public struct DataAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClien
                                                            allowedCharacterSet: .uriAWSQueryValueAllowed)
                 
                 if !encodedQuery.isEmpty {
-                    query = "?" + encodedQuery
+                    let separator = path.contains("?") ? "&" : "?"
+                    query = separator + encodedQuery
                 } else {
                     query = ""
                 }
