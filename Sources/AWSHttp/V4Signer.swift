@@ -233,14 +233,20 @@ struct V4Signer {
         if let rawQuery = url.query {
             let queryComponents = rawQuery.split(separator: "&")
             
-            let mappedComponents: [String] = queryComponents.map { component in
-                if component.firstIndex(of: "=") == nil {
+            let mappedComponents: [String] = queryComponents.map { component -> (key: String, component: String) in
+                let parameterComponents = component.split(separator: "=")
+                let key = parameterComponents[0]
+
+                let formattedComponent: String
+                if parameterComponents.count == 1 {
                     // query keys without values require '=' at the end
-                    return "\(component)="
+                    formattedComponent = "\(component)="
                 } else {
-                    return String(component)
+                    formattedComponent = String(component)
                 }
-            }
+
+                return (String(key), formattedComponent)
+            }.sorted(by: { $0.key < $1.key }).map(\.component)
             
             query = mappedComponents.joined(separator: "&")
         } else {
