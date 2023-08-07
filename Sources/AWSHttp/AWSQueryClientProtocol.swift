@@ -45,7 +45,7 @@ public extension AWSQueryClientProtocol {
             invocationContext: invocationContext,
             retryConfiguration: retryConfiguration,
             retryOnError: retryOnErrorProvider) .flatMapErrorThrowing { error in
-                let typedError: ErrorType = error.asTypedError()
+                let typedError: ErrorType = try error.asTypedErrorThrowingHTTPErrors()
                 throw typedError
             }
     }
@@ -78,7 +78,7 @@ public extension AWSQueryClientProtocol {
             invocationContext: invocationContext,
             retryConfiguration: retryConfiguration,
             retryOnError: retryOnErrorProvider) .flatMapErrorThrowing { error in
-                let typedError: ErrorType = error.asTypedError()
+                let typedError: ErrorType = try error.asTypedErrorThrowingHTTPErrors()
                 throw typedError
             }
     }
