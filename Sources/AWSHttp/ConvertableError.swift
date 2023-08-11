@@ -29,17 +29,6 @@ public extension SmokeHTTPClient.HTTPClientError {
             return ErrorType.asUnrecognizedError(error: cause)
         }
     }
-    
-    func asTypedErrorThrowingHTTPErrors<ErrorType: ConvertableError>() throws -> ErrorType {
-        if let typedError = cause as? ErrorType {
-            return typedError
-        } else if let httpError = cause as? HTTPError {
-            // throw the http error unwrapped
-            throw httpError
-        } else {
-            return ErrorType.asUnrecognizedError(error: cause)
-        }
-    }
 }
 
 public extension Swift.Error {
@@ -51,11 +40,11 @@ public extension Swift.Error {
         }
     }
     
-    func asTypedErrorThrowingHTTPErrors<ErrorType: ConvertableError>() throws -> ErrorType {
-        if let typedError = self as? SmokeHTTPClient.HTTPClientError {
-            return try typedError.asTypedErrorThrowingHTTPErrors()
+    func unwrapHTTPClientError<ErrorType: ConvertableError>(type: ErrorType.Type) throws -> Never {
+        if let typedError = self as? SmokeHTTPClient.HTTPClientError {            
+            throw typedError.cause
         } else {
-            return ErrorType.asUnrecognizedError(error: self)
+            throw self
         }
     }
 }

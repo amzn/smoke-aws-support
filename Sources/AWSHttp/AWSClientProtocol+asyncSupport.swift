@@ -56,8 +56,7 @@ public extension AWSClientProtocol {
                 retryConfiguration: retryConfiguration,
                 retryOnError: retryOnErrorProvider)
         } catch {
-            let typedError: ErrorType = try error.asTypedErrorThrowingHTTPErrors()
-            throw typedError
+            try error.unwrapHTTPClientError(type: errorType)
         }
     }
     
@@ -92,8 +91,7 @@ public extension AWSClientProtocol {
                 retryConfiguration: retryConfiguration,
                 retryOnError: retryOnErrorProvider)
         } catch {
-            let typedError: ErrorType = try error.asTypedErrorThrowingHTTPErrors()
-            throw typedError
+            try error.unwrapHTTPClientError(type: errorType)
         }
     }
 }
