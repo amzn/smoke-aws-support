@@ -40,6 +40,10 @@ extension HTTPClientDelegate {
                      metadata: ["body": "\(bodyWithErrorTypeAsJSON.debugString)"])
         
         // attempt to get an error of Error type by decoding the body data
-        return try JSONDecoder.awsCompatibleDecoder().decode(ErrorType.self, from: bodyWithErrorTypeAsJSON)
+        do {
+            return try JSONDecoder.awsCompatibleDecoder().decode(ErrorType.self, from: bodyWithErrorTypeAsJSON)
+        } catch let error as DecodingError {
+            throw HTTPError.deserializationError(cause: error)
+        }
     }
 }

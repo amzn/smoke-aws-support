@@ -73,8 +73,7 @@ public extension AWSQueryClientProtocol {
                 retryConfiguration: retryConfiguration,
                 retryOnError: retryOnErrorProvider)
         } catch {
-            let typedError: ErrorType = error.asTypedError()
-            throw typedError
+            try error.unwrapHTTPClientError(type: errorType)
         }
     }
       
@@ -108,8 +107,7 @@ public extension AWSQueryClientProtocol {
                 retryConfiguration: retryConfiguration,
                 retryOnError: retryOnErrorProvider)
         } catch {
-            let typedError: ErrorType = error.asTypedError()
-            throw typedError
+            try error.unwrapHTTPClientError(type: errorType)
         }
     }
 }

@@ -39,4 +39,12 @@ public extension Swift.Error {
             return ErrorType.asUnrecognizedError(error: self)
         }
     }
+    
+    func unwrapHTTPClientError<ErrorType: ConvertableError>(type: ErrorType.Type) throws -> Never {
+        if let typedError = self as? SmokeHTTPClient.HTTPClientError {            
+            throw typedError.cause
+        } else {
+            throw self
+        }
+    }
 }

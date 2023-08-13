@@ -60,11 +60,15 @@ public struct JSONAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClien
                                                     logger: invocationReporting.logger)
         } else {
             // Convert bodyData to a debug string only if debug logging is enabled
-            invocationReporting.logger.trace("Attempting to decode error data from JSON to \(ErrorType.self)",
+            invocationReporting.logger.info("Attempting to decode error data from JSON to \(ErrorType.self)",
                                              metadata: ["body": "\(bodyData.debugString)"])
             
             // attempt to get an error of Error type by decoding the body data
-            cause = try JSONDecoder.awsCompatibleDecoder().decode(ErrorType.self, from: bodyData)
+            do {
+                cause = try JSONDecoder.awsCompatibleDecoder().decode(ErrorType.self, from: bodyData)
+            } catch let error as DecodingError {
+                throw HTTPError.deserializationError(cause: error)
+            }
         }
         
         return HTTPClientError(responseCode: Int(response.status.code), cause: cause)
@@ -157,8 +161,12 @@ public struct JSONAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClien
                 throw HTTPError.badResponse("Unexpected empty response.")
             }
             
-            return try JSONDecoder.awsCompatibleDecoder().decode(OutputType.BodyType.self,
-                                                               from: responseBody)
+            do {
+                return try JSONDecoder.awsCompatibleDecoder().decode(OutputType.BodyType.self,
+                                                                     from: responseBody)
+            } catch let error as DecodingError {
+                throw HTTPError.deserializationError(cause: error)
+            }
         }
         
         let mappedHeaders: [(String, String?)] = headers.map { ($0.0, $0.1) }
