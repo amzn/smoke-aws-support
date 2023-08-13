@@ -60,7 +60,7 @@ public struct JSONAWSHttpClientDelegate<ErrorType: Error & Decodable>: HTTPClien
                                                     logger: invocationReporting.logger)
         } else {
             // Convert bodyData to a debug string only if debug logging is enabled
-            invocationReporting.logger.info("Attempting to decode error data from JSON to \(ErrorType.self)",
+            invocationReporting.logger.trace("Attempting to decode error data from JSON to \(ErrorType.self)",
                                              metadata: ["body": "\(bodyData.debugString)"])
             
             // attempt to get an error of Error type by decoding the body data
