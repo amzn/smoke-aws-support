@@ -10,12 +10,20 @@ import NIOTransportServices
 import AsyncHTTPClient
 
 public protocol AWSClientProtocol {
+    var clientName: String { get }
     var awsRegion: AWSRegion { get }
     var service: String { get }
     var target: String? { get }
     var retryConfiguration: HTTPClientRetryConfiguration { get }
     var retryOnErrorProvider: (SmokeHTTPClient.HTTPClientError) -> Bool { get }
     var credentialsProvider: CredentialsProvider { get }
+}
+
+public extension AWSClientProtocol {
+    // for backwards-compatibility
+    var clientName: String {
+        return "UnnamedClient"
+    }
 }
 
 public extension AWSClientProtocol {

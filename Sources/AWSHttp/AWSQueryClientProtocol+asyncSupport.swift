@@ -68,6 +68,8 @@ public extension AWSQueryClientProtocol {
             return try await httpClient.executeRetriableWithoutOutput(
                 endpointPath: "/",
                 httpMethod: .POST,
+                clientName: self.clientName,
+                operation: action,
                 input: requestInput,
                 invocationContext: invocationContext,
                 retryConfiguration: retryConfiguration,
@@ -102,6 +104,8 @@ public extension AWSQueryClientProtocol {
             return try await httpClient.executeRetriableWithOutput(
                 endpointPath: "/",
                 httpMethod: .POST,
+                clientName: self.clientName,
+                operation: action,
                 input: requestInput,
                 invocationContext: invocationContext,
                 retryConfiguration: retryConfiguration,

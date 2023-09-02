@@ -7,6 +7,7 @@ import AWSCore
 import NIO
 
 public protocol AWSQueryClientProtocol {
+    var clientName: String { get }
     var awsRegion: AWSRegion { get }
     var service: String { get }
     var apiVersion: String { get }
@@ -14,6 +15,13 @@ public protocol AWSQueryClientProtocol {
     var retryConfiguration: HTTPClientRetryConfiguration { get }
     var retryOnErrorProvider: (SmokeHTTPClient.HTTPClientError) -> Bool { get }
     var credentialsProvider: CredentialsProvider { get }
+}
+
+public extension AWSQueryClientProtocol {
+    // for backwards-compatibility
+    var clientName: String {
+        return "UnnamedClient"
+    }
 }
 
 public extension AWSQueryClientProtocol {
