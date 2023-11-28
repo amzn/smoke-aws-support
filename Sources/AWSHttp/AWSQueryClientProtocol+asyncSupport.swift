@@ -50,11 +50,22 @@ public extension AWSQueryClientProtocol {
             action: String,
             reporting: InvocationReportingType,
             errorType: ErrorType.Type) async throws {
-        let handlerDelegate = AWSClientInvocationDelegate(
-                    credentialsProvider: credentialsProvider,
-                    awsRegion: awsRegion,
-                    service: service,
-                    target: target)
+        let handlerDelegate: AWSClientInvocationDelegate
+        if let credentialsProviderV2 = credentialsProvider as? CredentialsProviderV2 {
+            let credentials = await credentialsProviderV2.getCredentials()
+            
+            handlerDelegate = AWSClientInvocationDelegate(
+                credentials: credentials,
+                awsRegion: awsRegion,
+                service: service,
+                target: target)
+        } else {
+            handlerDelegate = AWSClientInvocationDelegate(
+                credentialsProvider: credentialsProvider,
+                awsRegion: awsRegion,
+                service: service,
+                target: target)
+        }
         
         let invocationContext = HTTPClientInvocationContext(reporting: reporting,
                                                             handlerDelegate: handlerDelegate)
@@ -86,11 +97,22 @@ public extension AWSQueryClientProtocol {
             action: String,
             reporting: InvocationReportingType,
             errorType: ErrorType.Type) async throws -> OutputType {
-        let handlerDelegate = AWSClientInvocationDelegate(
-                    credentialsProvider: credentialsProvider,
-                    awsRegion: awsRegion,
-                    service: service,
-                    target: target)
+        let handlerDelegate: AWSClientInvocationDelegate
+        if let credentialsProviderV2 = credentialsProvider as? CredentialsProviderV2 {
+            let credentials = await credentialsProviderV2.getCredentials()
+            
+            handlerDelegate = AWSClientInvocationDelegate(
+                credentials: credentials,
+                awsRegion: awsRegion,
+                service: service,
+                target: target)
+        } else {
+            handlerDelegate = AWSClientInvocationDelegate(
+                credentialsProvider: credentialsProvider,
+                awsRegion: awsRegion,
+                service: service,
+                target: target)
+        }
         
         let invocationContext = HTTPClientInvocationContext(reporting: reporting,
                                                             handlerDelegate: handlerDelegate)

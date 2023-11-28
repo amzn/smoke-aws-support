@@ -25,13 +25,45 @@ import SmokeHTTPClient
 public struct AWSClientInvocationDelegate : HTTPClientInvocationDelegate {
     public var specifyContentHeadersForZeroLengthBody: Bool
     
-    let credentialsProvider: CredentialsProvider
+    private enum CredentialsType {
+        case `static`(Credentials)
+        case provider(CredentialsProvider)
+        
+        func getCredentials() -> Credentials {
+            switch self {
+            case .static(let credentials):
+                return credentials
+            case .provider(let provider):
+                return provider.credentials
+            }
+        }
+    }
+    
+    private let credentialsType: CredentialsType
     let awsRegion: AWSRegion
     let service: String
     let operation: String?
     let target: String?
     let isV4SignRequest: Bool
     let signAllHeaders: Bool
+    
+    public init (credentials: Credentials,
+                 awsRegion: AWSRegion,
+                 service: String,
+                 operation: String? = nil,
+                 target: String? = nil,
+                 isV4SignRequest: Bool = true,
+                 specifyContentHeadersForZeroLengthBody: Bool = true,
+                 signAllHeaders: Bool = false) {
+        self.credentialsType = .static(credentials)
+        self.awsRegion = awsRegion
+        self.service = service
+        self.operation = operation
+        self.target = target
+        self.isV4SignRequest = isV4SignRequest
+        self.specifyContentHeadersForZeroLengthBody = specifyContentHeadersForZeroLengthBody
+        self.signAllHeaders = signAllHeaders
+    }
     
     public init (credentialsProvider: CredentialsProvider,
                  awsRegion: AWSRegion,
@@ -41,7 +73,7 @@ public struct AWSClientInvocationDelegate : HTTPClientInvocationDelegate {
                  isV4SignRequest: Bool = true,
                  specifyContentHeadersForZeroLengthBody: Bool = true,
                  signAllHeaders: Bool = false) {
-        self.credentialsProvider = credentialsProvider
+        self.credentialsType = .provider(credentialsProvider)
         self.awsRegion = awsRegion
         self.service = service
         self.operation = operation
@@ -74,7 +106,7 @@ public struct AWSClientInvocationDelegate : HTTPClientInvocationDelegate {
     public func addClientSpecificHeaders<InvocationReportingType>(
             parameters: HTTPRequestParameters,
             invocationReporting: InvocationReportingType) -> [(String, String)] where InvocationReportingType : HTTPClientInvocationReporting {
-        let v4Signer = V4Signer(credentials: credentialsProvider.credentials, region: awsRegion,
+        let v4Signer = V4Signer(credentials: self.credentialsType.getCredentials(), region: awsRegion,
                                 service: service,
                                 signAllHeaders: signAllHeaders)
         var headers: [(String, String)]

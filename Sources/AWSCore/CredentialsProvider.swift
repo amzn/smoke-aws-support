@@ -19,6 +19,18 @@ import Foundation
 
 /**
   Protocol for providing a Credentials instance for a request. Instances of this protocol
+  that are passed to an AWS Client are used throughout the lifetime of that client.
+ */
+public protocol CredentialsProviderV2 {
+    /**
+     Returns the current credentials. The provider should ensure that the returned credentials are valid and
+     refresh them if they are not.
+     */
+    func getCredentials() async -> Credentials
+}
+
+/**
+  Protocol for providing a Credentials instance for a request. Instances of this protocol
   that are passed to an AWS Client are used throughout the lifetime of that client. Each
   request retrieves a new Credentials instance that is used for that request. For credential
   rotation, the CredentialProvider implementation should manage swapping out an immutable
