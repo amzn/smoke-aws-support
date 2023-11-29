@@ -26,7 +26,7 @@ public protocol CredentialsProviderV2 {
      Returns the current credentials. The provider should ensure that the returned credentials are valid and
      refresh them if they are not.
      */
-    func getCredentials() async -> Credentials
+    func getCredentials() async throws -> Credentials
 }
 
 /**

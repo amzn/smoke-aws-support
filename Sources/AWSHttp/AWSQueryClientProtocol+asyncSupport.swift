@@ -52,7 +52,7 @@ public extension AWSQueryClientProtocol {
             errorType: ErrorType.Type) async throws {
         let handlerDelegate: AWSClientInvocationDelegate
         if let credentialsProviderV2 = credentialsProvider as? CredentialsProviderV2 {
-            let credentials = await credentialsProviderV2.getCredentials()
+            let credentials = try await credentialsProviderV2.getCredentials()
             
             handlerDelegate = AWSClientInvocationDelegate(
                 credentials: credentials,
@@ -99,7 +99,7 @@ public extension AWSQueryClientProtocol {
             errorType: ErrorType.Type) async throws -> OutputType {
         let handlerDelegate: AWSClientInvocationDelegate
         if let credentialsProviderV2 = credentialsProvider as? CredentialsProviderV2 {
-            let credentials = await credentialsProviderV2.getCredentials()
+            let credentials = try await credentialsProviderV2.getCredentials()
             
             handlerDelegate = AWSClientInvocationDelegate(
                 credentials: credentials,
