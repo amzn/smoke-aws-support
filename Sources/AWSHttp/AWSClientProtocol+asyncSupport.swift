@@ -35,13 +35,26 @@ public extension AWSClientProtocol {
             reporting: InvocationReportingType,
             signAllHeaders: Bool = false,
             errorType: ErrorType.Type) async throws {
-        let handlerDelegate = AWSClientInvocationDelegate(
-                    credentialsProvider: credentialsProvider,
-                    awsRegion: awsRegion,
-                    service: service,
-                    operation: operation,
-                    target: target,
-                    signAllHeaders: signAllHeaders)
+        let handlerDelegate: AWSClientInvocationDelegate
+        if let credentialsProviderV2 = credentialsProvider as? CredentialsProviderV2 {
+            let credentials = try await credentialsProviderV2.getCredentials()
+            
+            handlerDelegate = AWSClientInvocationDelegate(
+                credentials: credentials,
+                awsRegion: awsRegion,
+                service: service,
+                operation: operation,
+                target: target,
+                signAllHeaders: signAllHeaders)
+        } else {
+            handlerDelegate = AWSClientInvocationDelegate(
+                credentialsProvider: credentialsProvider,
+                awsRegion: awsRegion,
+                service: service,
+                operation: operation,
+                target: target,
+                signAllHeaders: signAllHeaders)
+        }
 
         let invocationContext = HTTPClientInvocationContext(reporting: reporting,
                                                             handlerDelegate: handlerDelegate)
@@ -71,13 +84,26 @@ public extension AWSClientProtocol {
             reporting: InvocationReportingType,
             signAllHeaders: Bool = false,
             errorType: ErrorType.Type) async throws -> OutputType {
-        let handlerDelegate = AWSClientInvocationDelegate(
-                    credentialsProvider: credentialsProvider,
-                    awsRegion: awsRegion,
-                    service: service,
-                    operation: operation,
-                    target: target,
-                    signAllHeaders: signAllHeaders)
+        let handlerDelegate: AWSClientInvocationDelegate
+        if let credentialsProviderV2 = credentialsProvider as? CredentialsProviderV2 {
+            let credentials = try await credentialsProviderV2.getCredentials()
+            
+            handlerDelegate = AWSClientInvocationDelegate(
+                credentials: credentials,
+                awsRegion: awsRegion,
+                service: service,
+                operation: operation,
+                target: target,
+                signAllHeaders: signAllHeaders)
+        } else {
+            handlerDelegate = AWSClientInvocationDelegate(
+                credentialsProvider: credentialsProvider,
+                awsRegion: awsRegion,
+                service: service,
+                operation: operation,
+                target: target,
+                signAllHeaders: signAllHeaders)
+        }
 
         let invocationContext = HTTPClientInvocationContext(reporting: reporting,
                                                             handlerDelegate: handlerDelegate)
