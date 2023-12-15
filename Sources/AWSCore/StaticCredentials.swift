@@ -52,3 +52,13 @@ extension StaticCredentials : CredentialsProvider {
         return self
     }
 }
+
+/**
+ Conforms StaticCredentials to the CredentialsProviderV2 protocol, always providing
+ itself.
+ */
+extension StaticCredentials: CredentialsProviderV2 {
+    public func getCredentials() async throws -> Credentials {
+        return self
+    }
+}
