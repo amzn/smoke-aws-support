@@ -47,6 +47,13 @@ public struct AWSClientInvocationDelegate : HTTPClientInvocationDelegate {
     let isV4SignRequest: Bool
     let signAllHeaders: Bool
     
+    /**
+     Convenience factory function that constructs an `AWSClientInvocationDelegate` instance according to the
+     `credentialsProvider` provided. If the `credentialsProvider` conforms to the `CredentialsProviderV2`
+     protocol credentials will be retrieved using that protocol - potentially suspending while refreshed credentials are retrieved.
+     Otherwise credentials will be retrieved using the `CredentialsProvider` protocol which has the potential to use
+     expired credentials in some circumstances.
+     */
     public static func get(credentialsProvider: CredentialsProvider,
                            awsRegion: AWSRegion,
                            service: String,
