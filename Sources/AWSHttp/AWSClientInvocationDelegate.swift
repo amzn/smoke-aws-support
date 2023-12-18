@@ -47,6 +47,49 @@ public struct AWSClientInvocationDelegate : HTTPClientInvocationDelegate {
     let isV4SignRequest: Bool
     let signAllHeaders: Bool
     
+    /**
+     Convenience factory function that constructs an `AWSClientInvocationDelegate` instance according to the
+     `credentialsProvider` provided. If the `credentialsProvider` conforms to the `CredentialsProviderV2`
+     protocol credentials will be retrieved using that protocol - potentially suspending while refreshed credentials are retrieved.
+     Otherwise credentials will be retrieved using the `CredentialsProvider` protocol which has the potential to use
+     expired credentials in some circumstances.
+     */
+    public static func get(credentialsProvider: CredentialsProvider,
+                           awsRegion: AWSRegion,
+                           service: String,
+                           operation: String? = nil,
+                           target: String? = nil,
+                           isV4SignRequest: Bool = true,
+                           specifyContentHeadersForZeroLengthBody: Bool = true,
+                           signAllHeaders: Bool = false) async throws -> AWSClientInvocationDelegate {
+        let handlerDelegate: AWSClientInvocationDelegate
+        if let credentialsProviderV2 = credentialsProvider as? CredentialsProviderV2 {
+            let credentials = try await credentialsProviderV2.getCredentials()
+            
+            handlerDelegate = AWSClientInvocationDelegate(
+                credentials: credentials,
+                awsRegion: awsRegion,
+                service: service,
+                operation: operation,
+                target: target,
+                isV4SignRequest: isV4SignRequest,
+                specifyContentHeadersForZeroLengthBody: specifyContentHeadersForZeroLengthBody,
+                signAllHeaders: signAllHeaders)
+        } else {
+            handlerDelegate = AWSClientInvocationDelegate(
+                credentialsProvider: credentialsProvider,
+                awsRegion: awsRegion,
+                service: service,
+                operation: operation,
+                target: target,
+                isV4SignRequest: isV4SignRequest,
+                specifyContentHeadersForZeroLengthBody: specifyContentHeadersForZeroLengthBody,
+                signAllHeaders: signAllHeaders)
+        }
+        
+        return handlerDelegate
+    }
+    
     public init (credentials: Credentials,
                  awsRegion: AWSRegion,
                  service: String,
